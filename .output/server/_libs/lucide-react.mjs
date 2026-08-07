@@ -75,7 +75,7 @@ const createLucideIcon = (iconName, iconNode) => {
   Component.displayName = toPascalCase(iconName);
   return Component;
 };
-const __iconNode$l = [
+const __iconNode$n = [
   ["path", { d: "M10 2v8l3-3 3 3V2", key: "sqw3rj" }],
   [
     "path",
@@ -85,8 +85,20 @@ const __iconNode$l = [
     }
   ]
 ];
-const BookMarked = createLucideIcon("book-marked", __iconNode$l);
-const __iconNode$k = [
+const BookMarked = createLucideIcon("book-marked", __iconNode$n);
+const __iconNode$m = [
+  ["path", { d: "M12 7v6", key: "lw1j43" }],
+  [
+    "path",
+    {
+      d: "M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a1 1 0 0 1 0-5H20",
+      key: "k3hazp"
+    }
+  ],
+  ["path", { d: "M9 10h6", key: "9gxzsh" }]
+];
+const BookPlus = createLucideIcon("book-plus", __iconNode$m);
+const __iconNode$l = [
   ["path", { d: "M12 7v6", key: "lw1j43" }],
   ["path", { d: "M15 10H9", key: "o6yqo3" }],
   [
@@ -97,8 +109,8 @@ const __iconNode$k = [
     }
   ]
 ];
-const BookmarkPlus = createLucideIcon("bookmark-plus", __iconNode$k);
-const __iconNode$j = [
+const BookmarkPlus = createLucideIcon("bookmark-plus", __iconNode$l);
+const __iconNode$k = [
   ["path", { d: "M12 18V5", key: "adv99a" }],
   ["path", { d: "M15 13a4.17 4.17 0 0 1-3-4 4.17 4.17 0 0 1-3 4", key: "1e3is1" }],
   ["path", { d: "M17.598 6.5A3 3 0 1 0 12 5a3 3 0 1 0-5.598 1.5", key: "1gqd8o" }],
@@ -108,10 +120,10 @@ const __iconNode$j = [
   ["path", { d: "M6 18a4 4 0 0 1-2-7.464", key: "k1g0md" }],
   ["path", { d: "M6.003 5.125a4 4 0 0 0-2.526 5.77", key: "q97ue3" }]
 ];
-const Brain = createLucideIcon("brain", __iconNode$j);
-const __iconNode$i = [["path", { d: "M20 6 9 17l-5-5", key: "1gmf2c" }]];
-const Check = createLucideIcon("check", __iconNode$i);
-const __iconNode$h = [
+const Brain = createLucideIcon("brain", __iconNode$k);
+const __iconNode$j = [["path", { d: "M20 6 9 17l-5-5", key: "1gmf2c" }]];
+const Check = createLucideIcon("check", __iconNode$j);
+const __iconNode$i = [
   [
     "path",
     {
@@ -121,8 +133,8 @@ const __iconNode$h = [
   ],
   ["path", { d: "M5 21h14", key: "11awu3" }]
 ];
-const Crown = createLucideIcon("crown", __iconNode$h);
-const __iconNode$g = [
+const Crown = createLucideIcon("crown", __iconNode$i);
+const __iconNode$h = [
   [
     "path",
     {
@@ -131,8 +143,8 @@ const __iconNode$g = [
     }
   ]
 ];
-const Flame = createLucideIcon("flame", __iconNode$g);
-const __iconNode$f = [
+const Flame = createLucideIcon("flame", __iconNode$h);
+const __iconNode$g = [
   [
     "path",
     {
@@ -150,8 +162,8 @@ const __iconNode$f = [
   ["path", { d: "M16 17h4", key: "1dejxt" }],
   ["path", { d: "M4 13h4", key: "1bwh8b" }]
 ];
-const Footprints = createLucideIcon("footprints", __iconNode$f);
-const __iconNode$e = [
+const Footprints = createLucideIcon("footprints", __iconNode$g);
+const __iconNode$f = [
   [
     "path",
     {
@@ -160,13 +172,13 @@ const __iconNode$e = [
     }
   ]
 ];
-const Heart = createLucideIcon("heart", __iconNode$e);
-const __iconNode$d = [
+const Heart = createLucideIcon("heart", __iconNode$f);
+const __iconNode$e = [
   ["path", { d: "M5 12h14", key: "1ays0h" }],
   ["path", { d: "M12 5v14", key: "s699le" }]
 ];
-const Plus = createLucideIcon("plus", __iconNode$d);
-const __iconNode$c = [
+const Plus = createLucideIcon("plus", __iconNode$e);
+const __iconNode$d = [
   ["path", { d: "M15 12h-5", key: "r7krc0" }],
   ["path", { d: "M15 8h-5", key: "1khuty" }],
   ["path", { d: "M19 17V5a2 2 0 0 0-2-2H4", key: "zz82l3" }],
@@ -178,7 +190,12 @@ const __iconNode$c = [
     }
   ]
 ];
-const ScrollText = createLucideIcon("scroll-text", __iconNode$c);
+const ScrollText = createLucideIcon("scroll-text", __iconNode$d);
+const __iconNode$c = [
+  ["path", { d: "m21 21-4.34-4.34", key: "14j7rj" }],
+  ["circle", { cx: "11", cy: "11", r: "8", key: "4ej97u" }]
+];
+const Search = createLucideIcon("search", __iconNode$c);
 const __iconNode$b = [
   ["path", { d: "m2 2 20 20", key: "1ooewy" }],
   [
@@ -333,5 +350,7 @@ export {
   Brain as i,
   TrendingUp as j,
   Skull as k,
-  Check as l
+  Check as l,
+  BookPlus as m,
+  Search as n
 };

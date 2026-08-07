@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { Character, HomebrewSpell } from "@/lib/types";
 import { DraftMod, expandMods, modifierLabel } from "@/lib/modifiers";
 import { ModifierEditor } from "@/components/character/ModifierEditor";
+import { SrdSpellPicker } from "@/components/character/SrdSpellPicker";
 import { useStore, concentrationCount } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -132,6 +133,13 @@ export function SpellsTab({ c }: { c: Character }) {
 
   return (
     <div className="space-y-6">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm text-muted-foreground">
+          Pull a spell from the official 5e list, or scribe your own below.
+        </p>
+        <SrdSpellPicker c={c} />
+      </div>
+
       <section className="grimoire-card p-6">
         <h3 className="font-display text-lg mb-4 flex items-center gap-2">
           <Sparkles className="h-4 w-4 text-primary" /> Inscribe homebrew spell

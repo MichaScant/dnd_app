@@ -308,6 +308,7 @@ var DescriptionWarning = ({ contentRef, descriptionId }) => {
   return null;
 };
 var Root = Dialog;
+var Trigger = DialogTrigger;
 var Portal = DialogPortal;
 var Overlay = DialogOverlay;
 var Content = DialogContent;
@@ -320,6 +321,7 @@ export {
   Overlay as O,
   Portal as P,
   Root as R,
-  Title as T,
-  Close as a
+  Trigger as T,
+  Close as a,
+  Title as b
 };
