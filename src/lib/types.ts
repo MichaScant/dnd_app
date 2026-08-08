@@ -64,6 +64,19 @@ export interface HomebrewAbility {
   description: string;
 }
 
+export interface InventoryItem {
+  id: string;
+  name: string;
+  kind: "gear" | "magic" | "custom";
+  category: string; // e.g. "Weapon", "Armor", "Wondrous Items"
+  rarity?: string; // magic items only
+  quantity: number;
+  weight?: string; // display string, e.g. "3 lb."
+  cost?: string; // display string, e.g. "15 gp"
+  description: string;
+  equipped?: boolean;
+}
+
 export type ModTarget =
   | "stat"
   | "ac"
@@ -153,6 +166,7 @@ export interface Character {
   classes: HomebrewClass[];
   spells: HomebrewSpell[];
   abilities: HomebrewAbility[];
+  inventory: InventoryItem[];
   effects: Effect[];
   levelTable: LevelEntry[];
   notes: string;
@@ -195,6 +209,7 @@ export const createCharacter = (name = "New Adventurer"): Character => ({
   classes: [],
   spells: [],
   abilities: [],
+  inventory: [],
   effects: [],
   levelTable: [],
   notes: "",

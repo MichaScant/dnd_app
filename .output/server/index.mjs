@@ -31,26 +31,26 @@ const services = {
 };
 globalThis.__nitro_vite_envs__ = services;
 const assets = {
-  "/assets/index-91oX1SKJ.js": {
+  "/assets/index-DJrSeK20.js": {
     "type": "text/javascript; charset=utf-8",
-    "etag": '"5dd4a-STEYjIf2ujeuVavhN61GD/Sqoec"',
-    "mtime": "2026-08-07T23:17:20.604Z",
+    "etag": '"5dd4a-sId9yVQb/5IQMCk8bF71QKKsdd4"',
+    "mtime": "2026-08-08T19:09:19.000Z",
     "size": 384330,
-    "path": "../public/assets/index-91oX1SKJ.js"
+    "path": "../public/assets/index-DJrSeK20.js"
   },
-  "/assets/index-B2NWCY33.js": {
-    "type": "text/javascript; charset=utf-8",
-    "etag": '"7b907-s7U+6Zn6pGaSTKlYH3gtaz7eNBc"',
-    "mtime": "2026-08-07T23:17:20.605Z",
-    "size": 506119,
-    "path": "../public/assets/index-B2NWCY33.js"
-  },
-  "/assets/styles-DiWPQFWm.css": {
+  "/assets/styles-BSliW8yE.css": {
     "type": "text/css; charset=utf-8",
-    "etag": '"12e75-rAkCfCSLl5Dv7BanZK06l/vIUjc"',
-    "mtime": "2026-08-07T23:17:20.604Z",
-    "size": 77429,
-    "path": "../public/assets/styles-DiWPQFWm.css"
+    "etag": '"13473-x16ma3Tr7qmr6MKOUAg5r8afttY"',
+    "mtime": "2026-08-08T19:09:19.000Z",
+    "size": 78963,
+    "path": "../public/assets/styles-BSliW8yE.css"
+  },
+  "/assets/index-CnhwTyLg.js": {
+    "type": "text/javascript; charset=utf-8",
+    "etag": '"d6c80-nBC0Vh4LUF8JCH4J7+8/3yMbFyg"',
+    "mtime": "2026-08-08T19:09:19.000Z",
+    "size": 879744,
+    "path": "../public/assets/index-CnhwTyLg.js"
   }
 };
 const publicAssetBases = {};

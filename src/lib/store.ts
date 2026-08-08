@@ -7,6 +7,7 @@ import {
   HomebrewAbility,
   HomebrewClass,
   HomebrewSpell,
+  InventoryItem,
   LevelEntry,
   StatKey,
   Stats,
@@ -34,6 +35,9 @@ interface State {
   removeSpell: (id: string, sid: string) => void;
   addAbility: (id: string, a: Omit<HomebrewAbility, "id">) => void;
   removeAbility: (id: string, aid: string) => void;
+  addItem: (id: string, item: Omit<InventoryItem, "id">) => boolean;
+  removeItem: (id: string, iid: string) => void;
+  updateItem: (id: string, iid: string, patch: Partial<InventoryItem>) => void;
   addClass: (id: string, c: Omit<HomebrewClass, "id">) => void;
   removeClass: (id: string, cid: string) => void;
   setLevelTable: (id: string, table: LevelEntry[]) => void;
@@ -180,6 +184,40 @@ export const useStore = create<State>()(
           characters: patchChar(s.characters, id, (c) => ({
             ...c,
             abilities: c.abilities.filter((x) => x.id !== aid),
+          })),
+        })),
+      addItem: (id, item) => {
+        // Refuse to add the same item twice (matched by name, case-insensitive).
+        let added = false;
+        const key = item.name.trim().toLowerCase();
+        set((s) => ({
+          characters: patchChar(s.characters, id, (c) => {
+            const inv = c.inventory ?? [];
+            if (inv.some((it) => it.name.trim().toLowerCase() === key))
+              return c;
+            added = true;
+            return {
+              ...c,
+              inventory: [...inv, { ...item, id: crypto.randomUUID() }],
+            };
+          }),
+        }));
+        return added;
+      },
+      removeItem: (id, iid) =>
+        set((s) => ({
+          characters: patchChar(s.characters, id, (c) => ({
+            ...c,
+            inventory: (c.inventory ?? []).filter((it) => it.id !== iid),
+          })),
+        })),
+      updateItem: (id, iid, patch) =>
+        set((s) => ({
+          characters: patchChar(s.characters, id, (c) => ({
+            ...c,
+            inventory: (c.inventory ?? []).map((it) =>
+              it.id === iid ? { ...it, ...patch } : it,
+            ),
           })),
         })),
       addClass: (id, cl) =>
