@@ -75,6 +75,7 @@ export interface InventoryItem {
   cost?: string; // display string, e.g. "15 gp"
   description: string;
   equipped?: boolean;
+  modifiers?: StatModifier[]; // applied to the character while equipped
 }
 
 export type ModTarget =

@@ -9,6 +9,7 @@ import {
 } from "@/lib/types";
 import {
   useStore,
+  activeEffects,
   effectiveStats,
   sumEffectBonus,
   sumSaveBonus,
@@ -24,7 +25,9 @@ import { Heart, Shield, Footprints, Sparkles, Star, Zap } from "lucide-react";
 
 export function OverviewTab({ c }: { c: Character }) {
   const { update, setStat, toggleSave, cycleSkill } = useStore();
-  const effective = effectiveStats(c.stats, c.effects);
+  // Buffs/debuffs + equipped gear all feed the stat, AC, save, and skill math.
+  const all = activeEffects(c);
+  const effective = effectiveStats(c.stats, all);
 
   return (
     <div className="space-y-6">
@@ -123,7 +126,7 @@ export function OverviewTab({ c }: { c: Character }) {
         </VitalCard>
         <VitalCard icon={<Shield className="h-4 w-4" />} label="Armor Class">
           {(() => {
-            const acBonus = sumEffectBonus(c.effects, "ac");
+            const acBonus = sumEffectBonus(all, "ac");
             return (
               <div className="relative">
                 <Input
@@ -135,7 +138,7 @@ export function OverviewTab({ c }: { c: Character }) {
                 {acBonus !== 0 && (
                   <span
                     className={`absolute right-2 top-1/2 -translate-y-1/2 text-sm font-display tabular-nums ${acBonus > 0 ? "text-primary" : "text-destructive"}`}
-                    title={`Base ${c.ac}, ${acBonus > 0 ? `+${acBonus}` : acBonus} from effects = ${c.ac + acBonus}`}
+                    title={`Base ${c.ac}, ${acBonus > 0 ? `+${acBonus}` : acBonus} from effects & gear = ${c.ac + acBonus}`}
                   >
                     = {c.ac + acBonus}
                   </span>
@@ -161,7 +164,7 @@ export function OverviewTab({ c }: { c: Character }) {
           </div>
         </VitalCard>
         {(() => {
-          const extraActions = sumEffectBonus(c.effects, "extraAction");
+          const extraActions = sumEffectBonus(all, "extraAction");
           if (extraActions === 0) return null;
           return (
             <VitalCard icon={<Zap className="h-4 w-4" />} label="Actions">
@@ -180,7 +183,7 @@ export function OverviewTab({ c }: { c: Character }) {
       <section className="grimoire-card p-6">
         <h3 className="font-display text-lg mb-1">Ability Scores</h3>
         <p className="text-xs text-muted-foreground mb-4">
-          Base values; buffs and debuffs apply automatically.
+          Base values; buffs, debuffs, and equipped gear apply automatically.
         </p>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
           {STAT_KEYS.map((k) => {
@@ -228,7 +231,7 @@ export function OverviewTab({ c }: { c: Character }) {
               const mod =
                 modifier(effective[k]) +
                 (c.savingThrows[k] ? c.proficiencyBonus : 0) +
-                sumSaveBonus(c.effects, k);
+                sumSaveBonus(all, k);
               return (
                 <label
                   key={k}
@@ -262,7 +265,7 @@ export function OverviewTab({ c }: { c: Character }) {
               const bonus =
                 modifier(effective[ability]) +
                 pbMult * c.proficiencyBonus +
-                sumSkillBonus(c.effects, s);
+                sumSkillBonus(all, s);
               return (
                 <button
                   key={s}

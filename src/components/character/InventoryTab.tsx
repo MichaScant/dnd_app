@@ -2,6 +2,8 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Character, InventoryItem } from "@/lib/types";
 import { useStore } from "@/lib/store";
+import { DraftMod, expandMods, modifierLabel } from "@/lib/modifiers";
+import { ModifierEditor } from "@/components/character/ModifierEditor";
 import { SrdItemPicker } from "@/components/character/SrdItemPicker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,6 +37,7 @@ const carriedWeight = (items: InventoryItem[]): number =>
 export function InventoryTab({ c }: { c: Character }) {
   const { addItem, removeItem, updateItem } = useStore();
   const [form, setForm] = useState(blankItem);
+  const [mods, setMods] = useState<DraftMod[]>([]);
 
   const inventory = c.inventory ?? [];
 
@@ -48,10 +51,12 @@ export function InventoryTab({ c }: { c: Character }) {
       weight: form.weight.trim() || undefined,
       cost: form.cost.trim() || undefined,
       description: form.description.trim(),
+      modifiers: mods.length ? expandMods(mods) : undefined,
     });
     if (added) toast.success(`Added ${form.name.trim()}`);
     else toast.warning(`${form.name.trim()} is already in your inventory`);
     setForm(blankItem);
+    setMods([]);
   };
 
   // Group inventory by category for display.
@@ -143,6 +148,13 @@ export function InventoryTab({ c }: { c: Character }) {
               onChange={(e) =>
                 setForm({ ...form, description: e.target.value })
               }
+            />
+          </div>
+          <div className="md:col-span-6">
+            <ModifierEditor
+              mods={mods}
+              onChange={setMods}
+              emptyHint="No stat bonuses. Add some if wearing/wielding this item should change ability scores, AC, DC, saves, attack rolls, damage, or skills — they apply while it's equipped."
             />
           </div>
         </div>
@@ -277,6 +289,29 @@ function ItemRow({
         <p className="text-sm mt-2 text-muted-foreground whitespace-pre-wrap">
           {it.description}
         </p>
+      )}
+      {it.modifiers && it.modifiers.length > 0 && (
+        <div
+          className={`flex flex-wrap gap-1.5 mt-2 ${it.equipped ? "" : "opacity-50"}`}
+          title={
+            it.equipped
+              ? "Active while equipped"
+              : "Equip to apply these bonuses"
+          }
+        >
+          {it.modifiers.map((m, i) => (
+            <span
+              key={i}
+              className={`text-[11px] font-mono px-2 py-0.5 rounded border ${
+                m.delta >= 0
+                  ? "border-primary/40 bg-primary/10 text-primary"
+                  : "border-destructive/40 bg-destructive/10 text-destructive"
+              }`}
+            >
+              {modifierLabel(m)}
+            </span>
+          ))}
+        </div>
       )}
     </div>
   );

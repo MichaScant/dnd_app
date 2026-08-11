@@ -256,6 +256,28 @@ export const useActiveCharacter = () => {
 export const concentrationCount = (effects: Effect[]): number =>
   effects.filter((e) => e.concentration).length;
 
+/** Equipped inventory items that carry modifiers, expressed as effect sources. */
+export const equippedGearEffects = (c: Character): Effect[] =>
+  (c.inventory ?? [])
+    .filter((it) => it.equipped && it.modifiers && it.modifiers.length > 0)
+    .map((it) => ({
+      id: it.id,
+      name: it.name,
+      kind: "buff" as const,
+      description: it.description,
+      modifiers: it.modifiers ?? [],
+    }));
+
+/**
+ * Every active modifier source for stat/AC/save/skill math: buffs & debuffs
+ * plus equipped gear. Concentration and the "active effects" tally stay on
+ * `c.effects` alone — gear isn't a buff.
+ */
+export const activeEffects = (c: Character): Effect[] => [
+  ...c.effects,
+  ...equippedGearEffects(c),
+];
+
 export const effectiveStats = (base: Stats, effects: Effect[]): Stats => {
   const out: Stats = { ...base };
   for (const e of effects) {
