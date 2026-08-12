@@ -11,6 +11,7 @@ import {
   useStore,
   activeEffects,
   effectiveStats,
+  equippedItems,
   sumEffectBonus,
   sumSaveBonus,
   sumSkillBonus,
@@ -20,6 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import { EquipmentBox } from "@/components/character/EquipmentBox";
 import { DEFAULT_SKILLS } from "@/lib/types";
 import { Heart, Shield, Footprints, Sparkles, Star, Zap } from "lucide-react";
 
@@ -28,6 +30,15 @@ export function OverviewTab({ c }: { c: Character }) {
   // Buffs/debuffs + equipped gear all feed the stat, AC, save, and skill math.
   const all = activeEffects(c);
   const effective = effectiveStats(c.stats, all);
+  // Heavy armor whose Strength requirement isn't met costs 10 ft of speed (5e).
+  const speedPenalty = equippedItems(c).some(
+    (it) =>
+      it.armorWeight === "Heavy" &&
+      it.strengthReq != null &&
+      c.stats.str < it.strengthReq,
+  )
+    ? -10
+    : 0;
 
   return (
     <div className="space-y-6">
@@ -148,12 +159,22 @@ export function OverviewTab({ c }: { c: Character }) {
           })()}
         </VitalCard>
         <VitalCard icon={<Footprints className="h-4 w-4" />} label="Speed">
-          <Input
-            type="number"
-            value={c.speed}
-            onChange={(e) => update(c.id, { speed: +e.target.value || 0 })}
-            className="text-center text-2xl font-display h-12"
-          />
+          <div className="relative">
+            <Input
+              type="number"
+              value={c.speed}
+              onChange={(e) => update(c.id, { speed: +e.target.value || 0 })}
+              className={`text-center text-2xl font-display h-12 ${speedPenalty !== 0 ? "pr-12" : ""}`}
+            />
+            {speedPenalty !== 0 && (
+              <span
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-sm font-display tabular-nums text-destructive"
+                title={`Heavy armor Strength requirement unmet: ${speedPenalty} ft = ${c.speed + speedPenalty}`}
+              >
+                = {c.speed + speedPenalty}
+              </span>
+            )}
+          </div>
         </VitalCard>
         <VitalCard
           icon={<Sparkles className="h-4 w-4" />}
@@ -312,6 +333,8 @@ export function OverviewTab({ c }: { c: Character }) {
           </div>
         </section>
       </div>
+
+      <EquipmentBox c={c} />
 
       <section className="grimoire-card p-6">
         <h3 className="font-display text-lg mb-3">Notes & Backstory</h3>

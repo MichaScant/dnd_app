@@ -64,6 +64,30 @@ export interface HomebrewAbility {
   description: string;
 }
 
+/** Which equipment slot an item fits (undefined = not slot-equippable). */
+export type SlotKind =
+  | "Head"
+  | "Cloak"
+  | "Chest"
+  | "Gloves"
+  | "Pants"
+  | "Boots"
+  | "Ring"
+  | "Weapon"
+  | "Shield";
+
+export type ArmorWeight = "Light" | "Medium" | "Heavy";
+
+export interface WeaponStats {
+  category?: string; // e.g. "Martial Melee", "Simple Ranged"
+  type?: string; // specific weapon, e.g. "Longsword" (or a homebrew name)
+  damage?: string; // damage dice, e.g. "1d8"
+  damageType?: string; // e.g. "Slashing"
+  range?: string; // e.g. "5 ft" or "80/320"
+  versatileDamage?: string; // two-handed damage when Versatile, e.g. "1d10"
+  properties?: string[]; // Finesse, Light, Two-Handed, Versatile, …
+}
+
 export interface InventoryItem {
   id: string;
   name: string;
@@ -74,7 +98,12 @@ export interface InventoryItem {
   weight?: string; // display string, e.g. "3 lb."
   cost?: string; // display string, e.g. "15 gp"
   description: string;
-  equipped?: boolean;
+  slot?: SlotKind; // the equipment slot this item fits
+  strengthReq?: number; // minimum Strength score to use without penalty
+  armorWeight?: ArmorWeight; // set when the item is armor
+  weapon?: WeaponStats; // set when the item is a weapon
+  shieldType?: string; // "Light" | "Heavy" — set when the item is a shield
+  shieldAc?: number; // AC granted while the shield is equipped
   modifiers?: StatModifier[]; // applied to the character while equipped
 }
 
@@ -168,6 +197,7 @@ export interface Character {
   spells: HomebrewSpell[];
   abilities: HomebrewAbility[];
   inventory: InventoryItem[];
+  equipment: Record<string, string>; // slot id -> equipped item id
   effects: Effect[];
   levelTable: LevelEntry[];
   notes: string;
@@ -211,6 +241,7 @@ export const createCharacter = (name = "New Adventurer"): Character => ({
   spells: [],
   abilities: [],
   inventory: [],
+  equipment: {},
   effects: [],
   levelTable: [],
   notes: "",

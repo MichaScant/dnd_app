@@ -1,4 +1,4 @@
-import { InventoryItem } from "@/lib/types";
+import { InventoryItem, SlotKind } from "@/lib/types";
 import { SRD_ATTRIBUTION } from "@/lib/srd";
 import rawItems from "@/data/srd-items.json";
 
@@ -76,6 +76,10 @@ export const groupItems = (
   );
 };
 
+/** Best-effort equipment slot for an SRD item, so it can be equipped too. */
+const slotForCategory = (category: string): SlotKind | undefined =>
+  category === "Weapon" ? "Weapon" : category === "Armor" ? "Chest" : undefined;
+
 /** Convert an SRD item into the character's inventory-item shape (qty 1). */
 export const toInventoryItem = (s: SrdItem): Omit<InventoryItem, "id"> => ({
   name: s.name,
@@ -86,4 +90,5 @@ export const toInventoryItem = (s: SrdItem): Omit<InventoryItem, "id"> => ({
   weight: s.weight,
   cost: s.cost,
   description: s.description,
+  slot: slotForCategory(s.category),
 });

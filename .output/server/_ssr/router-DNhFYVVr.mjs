@@ -16,7 +16,7 @@ import "../_libs/seroval-plugins.mjs";
 
 import "../_libs/react-dom.mjs";
 import "../_libs/isbot.mjs";
-const appCss = "/assets/styles-BSliW8yE.css";
+const appCss = "/assets/styles-DMffR5qt.css";
 function reportLovableError(error, context = {}) {
   if (typeof window === "undefined") return;
   window.__lovableEvents?.captureException?.(
@@ -148,7 +148,7 @@ function RootComponent() {
     /* @__PURE__ */ jsxRuntimeExports.jsx(Toaster, { richColors: true, position: "top-right" })
   ] });
 }
-const $$splitComponentImporter = () => import("./index-CL5O2YZh.mjs");
+const $$splitComponentImporter = () => import("./index-rpDtXxEB.mjs");
 const Route = createFileRoute("/")({
   head: () => ({
     meta: [{

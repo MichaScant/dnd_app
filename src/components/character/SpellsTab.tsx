@@ -18,7 +18,16 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Plus, Trash2, Sparkles, Wand2, Brain } from "lucide-react";
+import {
+  Plus,
+  Trash2,
+  Sparkles,
+  Wand2,
+  Brain,
+  Pencil,
+  Save,
+  X,
+} from "lucide-react";
 
 const SCHOOLS = [
   "Abjuration",
@@ -44,9 +53,11 @@ const blankForm = {
 };
 
 export function SpellsTab({ c }: { c: Character }) {
-  const { addSpell, removeSpell, addEffect, removeEffect } = useStore();
+  const { addSpell, removeSpell, updateSpell, addEffect, removeEffect } =
+    useStore();
   const [form, setForm] = useState(blankForm);
   const [mods, setMods] = useState<DraftMod[]>([]);
+  const [editingId, setEditingId] = useState<string | null>(null);
   // Cast dialog: "ask" = are you concentrating?, "drop" = pick a spell to drop.
   const [dialog, setDialog] = useState<{
     spell: HomebrewSpell;
@@ -62,11 +73,40 @@ export function SpellsTab({ c }: { c: Character }) {
 
   const submit = () => {
     if (!form.name.trim()) return;
-    addSpell(c.id, {
+    const payload = {
       ...form,
       name: form.name.trim(),
       modifiers: expandMods(mods),
+    };
+    if (editingId) {
+      updateSpell(c.id, editingId, payload);
+      toast.success(`Saved ${payload.name}`);
+    } else {
+      addSpell(c.id, payload);
+    }
+    setForm(blankForm);
+    setMods([]);
+    setEditingId(null);
+  };
+
+  const startEdit = (s: HomebrewSpell) => {
+    setEditingId(s.id);
+    setForm({
+      name: s.name,
+      level: s.level,
+      school: s.school,
+      castingTime: s.castingTime,
+      range: s.range,
+      duration: s.duration,
+      description: s.description,
+      concentration: !!s.concentration,
     });
+    setMods((s.modifiers ?? []) as DraftMod[]);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
     setForm(blankForm);
     setMods([]);
   };
@@ -142,7 +182,16 @@ export function SpellsTab({ c }: { c: Character }) {
 
       <section className="grimoire-card p-6">
         <h3 className="font-display text-lg mb-4 flex items-center gap-2">
-          <Sparkles className="h-4 w-4 text-primary" /> Inscribe homebrew spell
+          {editingId ? (
+            <>
+              <Pencil className="h-4 w-4 text-primary" /> Edit spell
+            </>
+          ) : (
+            <>
+              <Sparkles className="h-4 w-4 text-primary" /> Inscribe homebrew
+              spell
+            </>
+          )}
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
           <div className="md:col-span-3">
@@ -246,9 +295,24 @@ export function SpellsTab({ c }: { c: Character }) {
             />
           </div>
         </div>
-        <Button onClick={submit} className="mt-4">
-          <Plus className="h-4 w-4 mr-1.5" /> Add spell
-        </Button>
+        <div className="mt-4 flex gap-2">
+          <Button onClick={submit}>
+            {editingId ? (
+              <>
+                <Save className="h-4 w-4 mr-1.5" /> Save changes
+              </>
+            ) : (
+              <>
+                <Plus className="h-4 w-4 mr-1.5" /> Add spell
+              </>
+            )}
+          </Button>
+          {editingId && (
+            <Button variant="outline" onClick={cancelEdit}>
+              <X className="h-4 w-4 mr-1.5" /> Cancel
+            </Button>
+          )}
+        </div>
       </section>
 
       {levels.length === 0 ? (
@@ -283,12 +347,22 @@ export function SpellsTab({ c }: { c: Character }) {
                           {s.school}
                         </div>
                       </div>
-                      <button
-                        onClick={() => removeSpell(c.id, s.id)}
-                        className="text-muted-foreground hover:text-destructive"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          onClick={() => startEdit(s)}
+                          className="text-muted-foreground hover:text-primary"
+                          aria-label="Edit spell"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => removeSpell(c.id, s.id)}
+                          className="text-muted-foreground hover:text-destructive"
+                          aria-label="Remove spell"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
                     </div>
                     <div className="grid grid-cols-3 gap-2 text-[11px] text-muted-foreground mt-2">
                       <div>

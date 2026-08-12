@@ -1,19 +1,46 @@
-import { jsx, jsxs, Fragment } from "react/jsx-runtime";
-import * as React from "react";
-import { useState, useEffect, useMemo } from "react";
-import { create } from "zustand";
-import { persist } from "zustand/middleware";
-import { Slot } from "@radix-ui/react-slot";
-import { cva } from "class-variance-authority";
-import { clsx } from "clsx";
-import { twMerge } from "tailwind-merge";
-import * as ScrollAreaPrimitive from "@radix-ui/react-scroll-area";
-import { Swords, Plus, Trash2, Skull, Check, Heart, Shield, Footprints, Sparkles, Star, Zap, X, ShieldPlus, ShieldOff, BookmarkPlus, BookMarked, Wand2, BookPlus, ScrollText, Search, Brain, Crown, TrendingUp, PackagePlus, Sword, Package, Backpack, ShieldCheck, Minus, Flame } from "lucide-react";
-import * as LabelPrimitive from "@radix-ui/react-label";
-import * as CheckboxPrimitive from "@radix-ui/react-checkbox";
-import { toast } from "sonner";
-import * as DialogPrimitive from "@radix-ui/react-dialog";
-import * as TabsPrimitive from "@radix-ui/react-tabs";
+import { r as reactExports, j as jsxRuntimeExports } from "../_libs/react.mjs";
+import { c as create, p as persist } from "../_libs/zustand.mjs";
+import { S as Slot } from "../_libs/radix-ui__react-slot.mjs";
+import { c as cva } from "../_libs/class-variance-authority.mjs";
+import { c as clsx } from "../_libs/clsx.mjs";
+import { t as twMerge } from "../_libs/tailwind-merge.mjs";
+import { R as Root$1, V as Viewport, C as Corner, S as ScrollAreaScrollbar, a as ScrollAreaThumb } from "../_libs/radix-ui__react-scroll-area.mjs";
+import { R as Root$2 } from "../_libs/radix-ui__react-label.mjs";
+import { C as Checkbox$1, a as CheckboxIndicator } from "../_libs/radix-ui__react-checkbox.mjs";
+import { t as toast } from "../_libs/sonner.mjs";
+import { R as Root, T as Trigger$1, P as Portal, C as Content$1, a as Close, b as Title, D as Description, O as Overlay } from "../_libs/radix-ui__react-dialog.mjs";
+import { R as Root2, L as List, T as Trigger, C as Content } from "../_libs/radix-ui__react-tabs.mjs";
+import { S as ScrollText, F as Flame, a as Sparkles, B as Backpack, Z as Zap, C as Crown, b as Swords, P as Plus, H as Heart, c as Shield, d as Footprints, e as Star, f as ShieldPlus, g as ShieldOff, h as BookmarkPlus, i as BookMarked, T as Trash2, W as WandSparkles, j as Pencil, k as Brain, l as Save, X, m as Package, n as TrendingUp, o as Skull, p as Check, q as Shirt, r as BookPlus, s as Search, t as PackagePlus, u as Sword, v as ShieldCheck, M as Minus, w as TriangleAlert } from "../_libs/lucide-react.mjs";
+
+import "../_libs/radix-ui__react-compose-refs.mjs";
+import "../_libs/radix-ui__react-primitive.mjs";
+import "../_libs/react-dom.mjs";
+import "../_libs/radix-ui__react-presence.mjs";
+import "../_libs/@radix-ui/react-use-layout-effect+[...].mjs";
+import "../_libs/radix-ui__react-context.mjs";
+import "../_libs/@radix-ui/react-use-callback-ref+[...].mjs";
+import "../_libs/radix-ui__react-direction.mjs";
+import "../_libs/radix-ui__number.mjs";
+import "../_libs/radix-ui__primitive.mjs";
+import "../_libs/@radix-ui/react-use-controllable-state+[...].mjs";
+import "../_libs/radix-ui__react-use-previous.mjs";
+import "../_libs/radix-ui__react-use-size.mjs";
+import "../_libs/radix-ui__react-id.mjs";
+import "../_libs/@radix-ui/react-dismissable-layer+[...].mjs";
+import "../_libs/@radix-ui/react-use-escape-keydown+[...].mjs";
+import "../_libs/radix-ui__react-focus-scope.mjs";
+import "../_libs/radix-ui__react-portal.mjs";
+import "../_libs/radix-ui__react-focus-guards.mjs";
+import "../_libs/react-remove-scroll.mjs";
+import "../_libs/tslib.mjs";
+import "../_libs/react-remove-scroll-bar.mjs";
+import "../_libs/react-style-singleton.mjs";
+import "../_libs/get-nonce.mjs";
+import "../_libs/use-sidecar.mjs";
+import "../_libs/use-callback-ref.mjs";
+import "../_libs/aria-hidden.mjs";
+import "../_libs/radix-ui__react-roving-focus.mjs";
+import "../_libs/radix-ui__react-collection.mjs";
 const STAT_KEYS = ["str", "dex", "con", "int", "wis", "cha"];
 const STAT_LABELS = {
   str: "Strength",
@@ -111,6 +138,7 @@ const createCharacter = (name = "New Adventurer") => ({
   spells: [],
   abilities: [],
   inventory: [],
+  equipment: {},
   effects: [],
   levelTable: [],
   notes: ""
@@ -225,6 +253,14 @@ const useStore = create()(
           spells: c.spells.filter((x) => x.id !== sid)
         }))
       })),
+      updateSpell: (id, sid, patch) => set((st) => ({
+        characters: patchChar(st.characters, id, (c) => ({
+          ...c,
+          spells: c.spells.map(
+            (x) => x.id === sid ? { ...x, ...patch } : x
+          )
+        }))
+      })),
       addAbility: (id, a) => set((s) => ({
         characters: patchChar(s.characters, id, (c) => ({
           ...c,
@@ -255,10 +291,16 @@ const useStore = create()(
         return added;
       },
       removeItem: (id, iid) => set((s) => ({
-        characters: patchChar(s.characters, id, (c) => ({
-          ...c,
-          inventory: (c.inventory ?? []).filter((it) => it.id !== iid)
-        }))
+        characters: patchChar(s.characters, id, (c) => {
+          const equipment = { ...c.equipment ?? {} };
+          for (const k of Object.keys(equipment))
+            if (equipment[k] === iid) delete equipment[k];
+          return {
+            ...c,
+            inventory: (c.inventory ?? []).filter((it) => it.id !== iid),
+            equipment
+          };
+        })
       })),
       updateItem: (id, iid, patch) => set((s) => ({
         characters: patchChar(s.characters, id, (c) => ({
@@ -267,6 +309,22 @@ const useStore = create()(
             (it) => it.id === iid ? { ...it, ...patch } : it
           )
         }))
+      })),
+      equipItem: (id, slotId, itemId) => set((s) => ({
+        characters: patchChar(s.characters, id, (c) => {
+          const equipment = { ...c.equipment ?? {} };
+          for (const k of Object.keys(equipment))
+            if (equipment[k] === itemId) delete equipment[k];
+          equipment[slotId] = itemId;
+          return { ...c, equipment };
+        })
+      })),
+      unequipSlot: (id, slotId) => set((s) => ({
+        characters: patchChar(s.characters, id, (c) => {
+          const equipment = { ...c.equipment ?? {} };
+          delete equipment[slotId];
+          return { ...c, equipment };
+        })
       })),
       addClass: (id, cl) => set((s) => ({
         characters: patchChar(s.characters, id, (c) => ({
@@ -296,13 +354,30 @@ const useActiveCharacter = () => {
   return characters.find((c) => c.id === activeId) ?? null;
 };
 const concentrationCount = (effects) => effects.filter((e) => e.concentration).length;
-const equippedGearEffects = (c) => (c.inventory ?? []).filter((it) => it.equipped && it.modifiers && it.modifiers.length > 0).map((it) => ({
-  id: it.id,
-  name: it.name,
-  kind: "buff",
-  description: it.description,
-  modifiers: it.modifiers ?? []
-}));
+const equippedItemIds = (c) => new Set(Object.values(c.equipment ?? {}));
+const equippedItems = (c) => {
+  const ids = equippedItemIds(c);
+  return (c.inventory ?? []).filter((it) => ids.has(it.id));
+};
+const equippedGearEffects = (c) => {
+  const ids = equippedItemIds(c);
+  const out = [];
+  for (const it of c.inventory ?? []) {
+    if (!ids.has(it.id)) continue;
+    const modifiers = [...it.modifiers ?? []];
+    if (it.slot === "Shield" && it.shieldAc)
+      modifiers.push({ target: "ac", delta: it.shieldAc });
+    if (modifiers.length === 0) continue;
+    out.push({
+      id: it.id,
+      name: it.name,
+      kind: "buff",
+      description: it.description,
+      modifiers
+    });
+  }
+  return out;
+};
 const activeEffects = (c) => [
   ...c.effects,
   ...equippedGearEffects(c)
@@ -374,16 +449,16 @@ const buttonVariants = cva(
     }
   }
 );
-const Button = React.forwardRef(
+const Button = reactExports.forwardRef(
   ({ className, variant, size, asChild = false, ...props }, ref) => {
     const Comp = asChild ? Slot : "button";
-    return /* @__PURE__ */ jsx(Comp, { className: cn(buttonVariants({ variant, size, className })), ref, ...props });
+    return /* @__PURE__ */ jsxRuntimeExports.jsx(Comp, { className: cn(buttonVariants({ variant, size, className })), ref, ...props });
   }
 );
 Button.displayName = "Button";
-const Input = React.forwardRef(
+const Input = reactExports.forwardRef(
   ({ className, type, ...props }, ref) => {
-    return /* @__PURE__ */ jsx(
+    return /* @__PURE__ */ jsxRuntimeExports.jsx(
       "input",
       {
         type,
@@ -398,22 +473,22 @@ const Input = React.forwardRef(
   }
 );
 Input.displayName = "Input";
-const ScrollArea = React.forwardRef(({ className, children, ...props }, ref) => /* @__PURE__ */ jsxs(
-  ScrollAreaPrimitive.Root,
+const ScrollArea = reactExports.forwardRef(({ className, children, ...props }, ref) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+  Root$1,
   {
     ref,
     className: cn("relative overflow-hidden", className),
     ...props,
     children: [
-      /* @__PURE__ */ jsx(ScrollAreaPrimitive.Viewport, { className: "h-full w-full rounded-[inherit]", children }),
-      /* @__PURE__ */ jsx(ScrollBar, {}),
-      /* @__PURE__ */ jsx(ScrollAreaPrimitive.Corner, {})
+      /* @__PURE__ */ jsxRuntimeExports.jsx(Viewport, { className: "h-full w-full rounded-[inherit]", children }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(ScrollBar, {}),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(Corner, {})
     ]
   }
 ));
-ScrollArea.displayName = ScrollAreaPrimitive.Root.displayName;
-const ScrollBar = React.forwardRef(({ className, orientation = "vertical", ...props }, ref) => /* @__PURE__ */ jsx(
-  ScrollAreaPrimitive.ScrollAreaScrollbar,
+ScrollArea.displayName = Root$1.displayName;
+const ScrollBar = reactExports.forwardRef(({ className, orientation = "vertical", ...props }, ref) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+  ScrollAreaScrollbar,
   {
     ref,
     orientation,
@@ -424,27 +499,27 @@ const ScrollBar = React.forwardRef(({ className, orientation = "vertical", ...pr
       className
     ),
     ...props,
-    children: /* @__PURE__ */ jsx(ScrollAreaPrimitive.ScrollAreaThumb, { className: "relative flex-1 rounded-full bg-border" })
+    children: /* @__PURE__ */ jsxRuntimeExports.jsx(ScrollAreaThumb, { className: "relative flex-1 rounded-full bg-border" })
   }
 ));
-ScrollBar.displayName = ScrollAreaPrimitive.ScrollAreaScrollbar.displayName;
+ScrollBar.displayName = ScrollAreaScrollbar.displayName;
 function CharacterSidebar() {
   const { characters, activeId, setActive, addCharacter, removeCharacter } = useStore();
-  const [newName, setNewName] = useState("");
+  const [newName, setNewName] = reactExports.useState("");
   const create2 = () => {
     addCharacter(newName.trim() || "New Adventurer");
     setNewName("");
   };
-  return /* @__PURE__ */ jsxs("aside", { className: "w-72 shrink-0 border-r border-border bg-card/40 backdrop-blur-sm flex flex-col h-screen sticky top-0", children: [
-    /* @__PURE__ */ jsxs("div", { className: "p-5 border-b border-border", children: [
-      /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2 mb-1", children: [
-        /* @__PURE__ */ jsx(Swords, { className: "h-5 w-5 text-primary" }),
-        /* @__PURE__ */ jsx("h1", { className: "font-display text-xl text-gradient-ember", children: "Grimoire" })
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("aside", { className: "w-72 shrink-0 border-r border-border bg-card/40 backdrop-blur-sm flex flex-col h-screen sticky top-0", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-5 border-b border-border", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2 mb-1", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(Swords, { className: "h-5 w-5 text-primary" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "font-display text-xl text-gradient-ember", children: "Grimoire" })
       ] }),
-      /* @__PURE__ */ jsx("p", { className: "text-xs text-muted-foreground", children: "Adventurer's Codex" })
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-muted-foreground", children: "Adventurer's Codex" })
     ] }),
-    /* @__PURE__ */ jsxs("div", { className: "p-3 border-b border-border space-y-2", children: [
-      /* @__PURE__ */ jsx(
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-3 border-b border-border space-y-2", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
         Input,
         {
           value: newName,
@@ -454,14 +529,14 @@ function CharacterSidebar() {
           className: "bg-input/60 border-border"
         }
       ),
-      /* @__PURE__ */ jsxs(Button, { onClick: create2, className: "w-full", variant: "default", children: [
-        /* @__PURE__ */ jsx(Plus, { className: "h-4 w-4 mr-1" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs(Button, { onClick: create2, className: "w-full", variant: "default", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(Plus, { className: "h-4 w-4 mr-1" }),
         " Forge new hero"
       ] })
     ] }),
-    /* @__PURE__ */ jsx(ScrollArea, { className: "flex-1", children: /* @__PURE__ */ jsxs("div", { className: "p-2 space-y-1", children: [
-      characters.length === 0 && /* @__PURE__ */ jsx("p", { className: "text-xs text-muted-foreground p-4 text-center", children: "No heroes yet. Forge one above." }),
-      characters.map((c) => /* @__PURE__ */ jsx(
+    /* @__PURE__ */ jsxRuntimeExports.jsx(ScrollArea, { className: "flex-1", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-2 space-y-1", children: [
+      characters.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-muted-foreground p-4 text-center", children: "No heroes yet. Forge one above." }),
+      characters.map((c) => /* @__PURE__ */ jsxRuntimeExports.jsx(
         CharacterRow,
         {
           c,
@@ -480,7 +555,7 @@ function CharacterRow({
   onSelect,
   onRemove
 }) {
-  return /* @__PURE__ */ jsxs(
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs(
     "div",
     {
       onClick: onSelect,
@@ -489,10 +564,10 @@ function CharacterRow({
         active ? "bg-primary/10 border-primary/40 ember-glow" : "border-transparent hover:bg-muted hover:border-border"
       ),
       children: [
-        /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between gap-2", children: [
-          /* @__PURE__ */ jsxs("div", { className: "min-w-0", children: [
-            /* @__PURE__ */ jsx("div", { className: "font-display text-sm truncate", children: c.name }),
-            /* @__PURE__ */ jsxs("div", { className: "text-[11px] text-muted-foreground truncate", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-display text-sm truncate", children: c.name }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-[11px] text-muted-foreground truncate", children: [
               "Lv ",
               c.level,
               " ",
@@ -501,7 +576,7 @@ function CharacterRow({
               c.classSummary || "—"
             ] })
           ] }),
-          /* @__PURE__ */ jsx(
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {
               onClick: (e) => {
@@ -510,18 +585,18 @@ function CharacterRow({
               },
               className: "opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition",
               "aria-label": "Delete",
-              children: /* @__PURE__ */ jsx(Trash2, { className: "h-3.5 w-3.5" })
+              children: /* @__PURE__ */ jsxRuntimeExports.jsx(Trash2, { className: "h-3.5 w-3.5" })
             }
           )
         ] }),
-        /* @__PURE__ */ jsxs("div", { className: "mt-1.5 flex items-center gap-2 text-[10px] text-muted-foreground", children: [
-          /* @__PURE__ */ jsxs("span", { className: "flex items-center gap-1", children: [
-            /* @__PURE__ */ jsx(Skull, { className: "h-3 w-3" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1.5 flex items-center gap-2 text-[10px] text-muted-foreground", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center gap-1", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Skull, { className: "h-3 w-3" }),
             c.hp,
             "/",
             c.maxHp
           ] }),
-          /* @__PURE__ */ jsxs("span", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
             "AC ",
             c.ac
           ] })
@@ -533,11 +608,11 @@ function CharacterRow({
 const labelVariants = cva(
   "text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
 );
-const Label = React.forwardRef(({ className, ...props }, ref) => /* @__PURE__ */ jsx(LabelPrimitive.Root, { ref, className: cn(labelVariants(), className), ...props }));
-Label.displayName = LabelPrimitive.Root.displayName;
-const Textarea = React.forwardRef(
+const Label = reactExports.forwardRef(({ className, ...props }, ref) => /* @__PURE__ */ jsxRuntimeExports.jsx(Root$2, { ref, className: cn(labelVariants(), className), ...props }));
+Label.displayName = Root$2.displayName;
+const Textarea = reactExports.forwardRef(
   ({ className, ...props }, ref) => {
-    return /* @__PURE__ */ jsx(
+    return /* @__PURE__ */ jsxRuntimeExports.jsx(
       "textarea",
       {
         className: cn(
@@ -551,8 +626,8 @@ const Textarea = React.forwardRef(
   }
 );
 Textarea.displayName = "Textarea";
-const Checkbox = React.forwardRef(({ className, ...props }, ref) => /* @__PURE__ */ jsx(
-  CheckboxPrimitive.Root,
+const Checkbox = reactExports.forwardRef(({ className, ...props }, ref) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+  Checkbox$1,
   {
     ref,
     className: cn(
@@ -560,355 +635,116 @@ const Checkbox = React.forwardRef(({ className, ...props }, ref) => /* @__PURE__
       className
     ),
     ...props,
-    children: /* @__PURE__ */ jsx(CheckboxPrimitive.Indicator, { className: cn("grid place-content-center text-current"), children: /* @__PURE__ */ jsx(Check, { className: "h-4 w-4" }) })
+    children: /* @__PURE__ */ jsxRuntimeExports.jsx(CheckboxIndicator, { className: cn("grid place-content-center text-current"), children: /* @__PURE__ */ jsxRuntimeExports.jsx(Check, { className: "h-4 w-4" }) })
   }
 ));
-Checkbox.displayName = CheckboxPrimitive.Root.displayName;
-function OverviewTab({ c }) {
-  const { update, setStat, toggleSave, cycleSkill } = useStore();
-  const all = activeEffects(c);
-  const effective = effectiveStats(c.stats, all);
-  return /* @__PURE__ */ jsxs("div", { className: "space-y-6", children: [
-    /* @__PURE__ */ jsx("section", { className: "grimoire-card p-6", children: /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-1 md:grid-cols-4 gap-4", children: [
-      /* @__PURE__ */ jsx(Field, { label: "Name", className: "md:col-span-2", children: /* @__PURE__ */ jsx(
-        Input,
-        {
-          value: c.name,
-          onChange: (e) => update(c.id, { name: e.target.value })
-        }
-      ) }),
-      /* @__PURE__ */ jsx(Field, { label: "Race", children: /* @__PURE__ */ jsx(
-        Input,
-        {
-          value: c.race,
-          onChange: (e) => update(c.id, { race: e.target.value }),
-          placeholder: "Tiefling…"
-        }
-      ) }),
-      /* @__PURE__ */ jsx(Field, { label: "Class", children: /* @__PURE__ */ jsx(
-        Input,
-        {
-          value: c.classSummary,
-          onChange: (e) => update(c.id, { classSummary: e.target.value }),
-          placeholder: "Warlock 3 / Bard 2"
-        }
-      ) }),
-      /* @__PURE__ */ jsx(Field, { label: "Level", children: /* @__PURE__ */ jsx(
-        Input,
-        {
-          type: "number",
-          value: c.level,
-          onChange: (e) => update(c.id, { level: +e.target.value || 1 })
-        }
-      ) }),
-      /* @__PURE__ */ jsx(Field, { label: "XP", children: /* @__PURE__ */ jsx(
-        Input,
-        {
-          type: "number",
-          value: c.xp,
-          onChange: (e) => update(c.id, { xp: +e.target.value || 0 })
-        }
-      ) }),
-      /* @__PURE__ */ jsx(Field, { label: "Proficiency Bonus", children: /* @__PURE__ */ jsx(
-        Input,
-        {
-          type: "number",
-          value: c.proficiencyBonus,
-          onChange: (e) => update(c.id, { proficiencyBonus: +e.target.value || 2 })
-        }
-      ) }),
-      /* @__PURE__ */ jsx(Field, { label: "Concentration", children: (() => {
-        const current = concentrationCount(c.effects);
-        const max = c.concentrationMax ?? 1;
-        return /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-1.5", children: [
-          /* @__PURE__ */ jsx(
-            "span",
-            {
-              className: `text-2xl font-display tabular-nums ${current > max ? "text-destructive" : current > 0 ? "text-primary" : ""}`,
-              children: current
-            }
-          ),
-          /* @__PURE__ */ jsx("span", { className: "text-muted-foreground", children: "/" }),
-          /* @__PURE__ */ jsx(
-            Input,
-            {
-              type: "number",
-              min: 1,
-              value: max,
-              onChange: (e) => update(c.id, {
-                concentrationMax: Math.max(1, +e.target.value || 1)
-              }),
-              className: "w-16 text-center",
-              "aria-label": "Maximum concentration"
-            }
-          )
-        ] });
-      })() })
-    ] }) }),
-    /* @__PURE__ */ jsxs("section", { className: "grid grid-cols-2 md:grid-cols-4 gap-4", children: [
-      /* @__PURE__ */ jsx(
-        VitalCard,
-        {
-          icon: /* @__PURE__ */ jsx(Heart, { className: "h-4 w-4" }),
-          label: "Hit Points",
-          accent: "ember",
-          children: /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-1", children: [
-            /* @__PURE__ */ jsx(HpInput, { value: c.hp, onCommit: (v) => update(c.id, { hp: v }) }),
-            /* @__PURE__ */ jsx("span", { className: "text-muted-foreground", children: "/" }),
-            /* @__PURE__ */ jsx(
-              HpInput,
-              {
-                value: c.maxHp,
-                onCommit: (v) => update(c.id, { maxHp: v })
-              }
-            )
-          ] })
-        }
-      ),
-      /* @__PURE__ */ jsx(VitalCard, { icon: /* @__PURE__ */ jsx(Shield, { className: "h-4 w-4" }), label: "Armor Class", children: (() => {
-        const acBonus = sumEffectBonus(all, "ac");
-        return /* @__PURE__ */ jsxs("div", { className: "relative", children: [
-          /* @__PURE__ */ jsx(
-            Input,
-            {
-              type: "number",
-              value: c.ac,
-              onChange: (e) => update(c.id, { ac: +e.target.value || 0 }),
-              className: `text-center text-2xl font-display h-12 ${acBonus !== 0 ? "pr-12" : ""}`
-            }
-          ),
-          acBonus !== 0 && /* @__PURE__ */ jsxs(
-            "span",
-            {
-              className: `absolute right-2 top-1/2 -translate-y-1/2 text-sm font-display tabular-nums ${acBonus > 0 ? "text-primary" : "text-destructive"}`,
-              title: `Base ${c.ac}, ${acBonus > 0 ? `+${acBonus}` : acBonus} from effects & gear = ${c.ac + acBonus}`,
-              children: [
-                "= ",
-                c.ac + acBonus
-              ]
-            }
-          )
-        ] });
-      })() }),
-      /* @__PURE__ */ jsx(VitalCard, { icon: /* @__PURE__ */ jsx(Footprints, { className: "h-4 w-4" }), label: "Speed", children: /* @__PURE__ */ jsx(
-        Input,
-        {
-          type: "number",
-          value: c.speed,
-          onChange: (e) => update(c.id, { speed: +e.target.value || 0 }),
-          className: "text-center text-2xl font-display h-12"
-        }
-      ) }),
-      /* @__PURE__ */ jsx(
-        VitalCard,
-        {
-          icon: /* @__PURE__ */ jsx(Sparkles, { className: "h-4 w-4" }),
-          label: "Active Effects",
-          children: /* @__PURE__ */ jsx("div", { className: "text-2xl font-display h-12 flex items-center justify-center text-primary", children: c.effects.length })
-        }
-      ),
-      (() => {
-        const extraActions = sumEffectBonus(all, "extraAction");
-        if (extraActions === 0) return null;
-        return /* @__PURE__ */ jsx(VitalCard, { icon: /* @__PURE__ */ jsx(Zap, { className: "h-4 w-4" }), label: "Actions", children: /* @__PURE__ */ jsxs("div", { className: "text-2xl font-display h-12 flex items-center justify-center text-primary", children: [
-          1 + extraActions,
-          /* @__PURE__ */ jsxs("span", { className: "text-xs text-muted-foreground ml-1.5", children: [
-            "(",
-            extraActions > 0 ? `+${extraActions}` : extraActions,
-            ")"
-          ] })
-        ] }) });
-      })()
-    ] }),
-    /* @__PURE__ */ jsxs("section", { className: "grimoire-card p-6", children: [
-      /* @__PURE__ */ jsx("h3", { className: "font-display text-lg mb-1", children: "Ability Scores" }),
-      /* @__PURE__ */ jsx("p", { className: "text-xs text-muted-foreground mb-4", children: "Base values; buffs, debuffs, and equipped gear apply automatically." }),
-      /* @__PURE__ */ jsx("div", { className: "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3", children: STAT_KEYS.map((k) => {
-        const base = c.stats[k];
-        const eff = effective[k];
-        const diff = eff - base;
-        return /* @__PURE__ */ jsxs(
-          "div",
-          {
-            className: "rounded-lg border border-border bg-secondary/40 p-3 text-center relative overflow-hidden",
-            children: [
-              /* @__PURE__ */ jsx("div", { className: "text-[10px] uppercase tracking-widest text-muted-foreground", children: STAT_LABELS[k] }),
-              /* @__PURE__ */ jsx(
-                Input,
-                {
-                  type: "number",
-                  value: base,
-                  onChange: (e) => setStat(c.id, k, +e.target.value || 0),
-                  className: "my-2 text-center text-2xl font-display h-12 bg-background/40"
-                }
-              ),
-              /* @__PURE__ */ jsx(
-                "div",
-                {
-                  className: `text-lg font-display ${diff > 0 ? "text-primary" : diff < 0 ? "text-destructive" : ""}`,
-                  children: formatMod(modifier(eff))
-                }
-              ),
-              diff !== 0 && /* @__PURE__ */ jsxs(
-                "div",
-                {
-                  className: `text-[10px] mt-0.5 ${diff > 0 ? "text-primary" : "text-destructive"}`,
-                  children: [
-                    "(",
-                    eff,
-                    " ",
-                    diff > 0 ? `+${diff}` : diff,
-                    ")"
-                  ]
-                }
-              )
-            ]
-          },
-          k
-        );
-      }) })
-    ] }),
-    /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-1 lg:grid-cols-2 gap-6", children: [
-      /* @__PURE__ */ jsxs("section", { className: "grimoire-card p-6", children: [
-        /* @__PURE__ */ jsx("h3", { className: "font-display text-lg mb-4", children: "Saving Throws" }),
-        /* @__PURE__ */ jsx("div", { className: "space-y-2", children: STAT_KEYS.map((k) => {
-          const mod = modifier(effective[k]) + (c.savingThrows[k] ? c.proficiencyBonus : 0) + sumSaveBonus(all, k);
-          return /* @__PURE__ */ jsxs(
-            "label",
-            {
-              className: "flex items-center gap-3 px-3 py-2 rounded-md hover:bg-muted/50 cursor-pointer",
-              children: [
-                /* @__PURE__ */ jsx(
-                  Checkbox,
-                  {
-                    checked: c.savingThrows[k],
-                    onCheckedChange: () => toggleSave(c.id, k)
-                  }
-                ),
-                /* @__PURE__ */ jsx("span", { className: "flex-1 text-sm", children: STAT_LABELS[k] }),
-                /* @__PURE__ */ jsx("span", { className: "font-display text-primary", children: formatMod(mod) })
-              ]
-            },
-            k
-          );
-        }) })
-      ] }),
-      /* @__PURE__ */ jsxs("section", { className: "grimoire-card p-6", children: [
-        /* @__PURE__ */ jsx("h3", { className: "font-display text-lg mb-1", children: "Skill Proficiencies" }),
-        /* @__PURE__ */ jsx("p", { className: "text-[11px] text-muted-foreground mb-3", children: "Click to cycle: none → proficient → expertise." }),
-        /* @__PURE__ */ jsx("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-1", children: DEFAULT_SKILLS.map((s) => {
-          const ability = SKILL_ABILITY[s] ?? "int";
-          const isProf = c.skillProficiencies.includes(s);
-          const isExp = (c.skillExpertise ?? []).includes(s);
-          const pbMult = isExp ? 2 : isProf ? 1 : 0;
-          const bonus = modifier(effective[ability]) + pbMult * c.proficiencyBonus + sumSkillBonus(all, s);
-          return /* @__PURE__ */ jsxs(
-            "button",
-            {
-              type: "button",
-              onClick: () => cycleSkill(c.id, s),
-              className: "flex items-center gap-2 px-2 py-1.5 rounded text-sm hover:bg-muted/50 text-left",
-              children: [
-                /* @__PURE__ */ jsx(
-                  "span",
-                  {
-                    className: `inline-flex h-4 w-4 items-center justify-center rounded-sm border ${isExp ? "border-primary bg-primary/30 text-primary" : isProf ? "border-primary bg-primary/20 text-primary" : "border-border bg-background/40"}`,
-                    "aria-hidden": true,
-                    children: isExp ? /* @__PURE__ */ jsx(Star, { className: "h-3 w-3 fill-current" }) : isProf ? /* @__PURE__ */ jsx("span", { className: "h-1.5 w-1.5 rounded-full bg-primary" }) : null
-                  }
-                ),
-                /* @__PURE__ */ jsxs("span", { className: "flex-1", children: [
-                  s,
-                  /* @__PURE__ */ jsxs("span", { className: "text-[10px] text-muted-foreground ml-1 uppercase", children: [
-                    "(",
-                    ability,
-                    ")"
-                  ] })
-                ] }),
-                /* @__PURE__ */ jsx(
-                  "span",
-                  {
-                    className: `font-display tabular-nums ${isExp ? "text-primary" : isProf ? "text-primary/80" : "text-muted-foreground"}`,
-                    children: formatMod(bonus)
-                  }
-                )
-              ]
-            },
-            s
-          );
-        }) })
-      ] })
-    ] }),
-    /* @__PURE__ */ jsxs("section", { className: "grimoire-card p-6", children: [
-      /* @__PURE__ */ jsx("h3", { className: "font-display text-lg mb-3", children: "Notes & Backstory" }),
-      /* @__PURE__ */ jsx(
-        Textarea,
-        {
-          rows: 6,
-          value: c.notes,
-          onChange: (e) => update(c.id, { notes: e.target.value }),
-          placeholder: "Born under a blood moon…"
-        }
-      )
-    ] })
-  ] });
-}
-function Field({
-  label,
-  children,
-  className = ""
-}) {
-  return /* @__PURE__ */ jsxs("div", { className, children: [
-    /* @__PURE__ */ jsx(Label, { className: "text-xs text-muted-foreground uppercase tracking-wider mb-1.5 block", children: label }),
-    children
-  ] });
-}
-function VitalCard({
-  icon,
-  label,
-  children,
-  accent
-}) {
-  return /* @__PURE__ */ jsxs(
-    "div",
-    {
-      className: `grimoire-card p-4 ${accent === "ember" ? "ember-glow" : ""}`,
-      children: [
-        /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-1.5 text-xs uppercase tracking-widest text-muted-foreground mb-2", children: [
-          icon,
-          " ",
-          label
-        ] }),
-        children
-      ]
-    }
-  );
-}
-function HpInput({
-  value,
-  onCommit
-}) {
-  const [draft, setDraft] = useState(String(value));
-  useEffect(() => {
-    setDraft(String(value));
-  }, [value]);
-  return /* @__PURE__ */ jsx(
-    Input,
-    {
-      type: "number",
-      value: draft,
-      onChange: (e) => setDraft(e.target.value),
-      onBlur: () => onCommit(Number(draft) || 0),
-      onKeyDown: (e) => {
-        if (e.key === "Enter") {
-          onCommit(Number(draft) || 0);
-          e.target.blur();
-        }
-      },
-      className: "text-center text-2xl font-display h-12 min-w-[5.5rem]"
-    }
-  );
-}
+Checkbox.displayName = Checkbox$1.displayName;
+const SLOT_KINDS = [
+  "Head",
+  "Cloak",
+  "Chest",
+  "Gloves",
+  "Pants",
+  "Boots",
+  "Ring",
+  "Weapon",
+  "Shield"
+];
+const ARMOR_WEIGHTS = ["Light", "Medium", "Heavy"];
+const SHIELD_TYPES = ["Light", "Heavy"];
+const WEAPON_CATEGORIES = [
+  "Simple Melee",
+  "Simple Ranged",
+  "Martial Melee",
+  "Martial Ranged"
+];
+const WEAPON_TYPES = [
+  "Battleaxe",
+  "Blowgun",
+  "Club",
+  "Dagger",
+  "Dart",
+  "Flail",
+  "Glaive",
+  "Greataxe",
+  "Greatclub",
+  "Greatsword",
+  "Halberd",
+  "Hand Crossbow",
+  "Handaxe",
+  "Heavy Crossbow",
+  "Javelin",
+  "Lance",
+  "Light Crossbow",
+  "Light Hammer",
+  "Longbow",
+  "Longsword",
+  "Mace",
+  "Maul",
+  "Morningstar",
+  "Net",
+  "Pike",
+  "Quarterstaff",
+  "Rapier",
+  "Scimitar",
+  "Shortbow",
+  "Shortsword",
+  "Sickle",
+  "Sling",
+  "Spear",
+  "Trident",
+  "War Pick",
+  "Warhammer",
+  "Whip"
+];
+const DAMAGE_TYPES = ["Slashing", "Piercing", "Bludgeoning"];
+const WEAPON_PROPERTIES = [
+  "Ammunition",
+  "Finesse",
+  "Heavy",
+  "Light",
+  "Loading",
+  "Reach",
+  "Special",
+  "Thrown",
+  "Two-Handed",
+  "Versatile"
+];
+const weaponSummary = (w) => {
+  if (!w) return "";
+  const parts = [];
+  if (w.type) parts.push(w.type);
+  if (w.category) parts.push(w.category);
+  if (w.damage)
+    parts.push(
+      `${w.damage}${w.damageType ? " " + w.damageType : ""}${w.versatileDamage ? ` (versatile ${w.versatileDamage})` : ""}`
+    );
+  if (w.range) parts.push(`Range ${w.range}`);
+  if (w.properties?.length) parts.push(w.properties.join(", "));
+  return parts.join(" · ");
+};
+const EQUIP_SLOTS = [
+  { id: "head", label: "Head", accepts: "Head" },
+  { id: "cloak", label: "Cloak", accepts: "Cloak" },
+  { id: "chest", label: "Chest", accepts: "Chest" },
+  { id: "gloves", label: "Gloves", accepts: "Gloves" },
+  { id: "pants", label: "Pants", accepts: "Pants" },
+  { id: "boots", label: "Boots", accepts: "Boots" },
+  { id: "mainHand", label: "Right Hand", accepts: "Weapon" },
+  { id: "offHand", label: "Left Hand", accepts: "Weapon" },
+  { id: "shield", label: "Shield", accepts: "Shield" }
+];
+const RING_SLOT_PREFIX = "ring:";
+const ringSlotId = (itemId) => RING_SLOT_PREFIX + itemId;
+const equippedSlotLabel = (c, itemId) => {
+  const equipment = c.equipment ?? {};
+  const key = Object.keys(equipment).find((k) => equipment[k] === itemId);
+  if (!key) return void 0;
+  if (key.startsWith(RING_SLOT_PREFIX)) return "Ring";
+  return EQUIP_SLOTS.find((s) => s.id === key)?.label;
+};
+const itemsForSlot = (inventory, slot) => inventory.filter((it) => it.slot === slot.accepts);
+const ringItems = (inventory) => inventory.filter((it) => it.slot === "Ring");
 const TARGET_OPTIONS = [
   "stat",
   "ac",
@@ -964,6 +800,483 @@ function modifierLabel(m) {
       return `Action ${sign}`;
   }
 }
+const SELECT_CLASS$1 = "w-full bg-input border border-border rounded-md px-3 py-2 text-sm";
+function ModChips({ item }) {
+  if (!item.modifiers || item.modifiers.length === 0) return null;
+  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap gap-1.5 mt-2", children: item.modifiers.map((m, i) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+    "span",
+    {
+      className: `text-[11px] font-mono px-2 py-0.5 rounded border ${m.delta >= 0 ? "border-primary/40 bg-primary/10 text-primary" : "border-destructive/40 bg-destructive/10 text-destructive"}`,
+      children: modifierLabel(m)
+    },
+    i
+  )) });
+}
+function StrWarning({ item, str }) {
+  if (item.strengthReq == null || str >= item.strengthReq) return null;
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-[11px] text-destructive flex items-center gap-1 mt-2", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx(TriangleAlert, { className: "h-3 w-3" }),
+    " Requires Str ",
+    item.strengthReq,
+    " (you have ",
+    str,
+    ")",
+    item.armorWeight === "Heavy" ? " — speed −10" : ""
+  ] });
+}
+function EquipmentBox({ c }) {
+  const { equipItem, unequipSlot } = useStore();
+  const inventory = c.inventory ?? [];
+  const equipment = c.equipment ?? {};
+  const equippedIds = equippedItemIds(c);
+  const str = c.stats.str;
+  const rings = ringItems(inventory);
+  const toggleRing = (item) => {
+    if (equippedIds.has(item.id)) unequipSlot(c.id, ringSlotId(item.id));
+    else equipItem(c.id, ringSlotId(item.id), item.id);
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "grimoire-card p-6", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("h3", { className: "font-display text-lg mb-1 flex items-center gap-2", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(Shirt, { className: "h-4 w-4 text-primary" }),
+      " Equipment"
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-muted-foreground mb-4", children: "Assign items to slots. Equipped gear with bonuses updates your stats automatically. Manage items in the Inventory tab." }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-3", children: EQUIP_SLOTS.map((slot) => {
+      const options = itemsForSlot(inventory, slot);
+      const equippedId = equipment[slot.id] ?? "";
+      const item = inventory.find((it) => it.id === equippedId);
+      const opts = item && !options.some((o) => o.id === item.id) ? [item, ...options] : options;
+      return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+        "div",
+        {
+          className: "rounded-md border border-border bg-background/40 p-3",
+          children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between mb-1.5", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-[11px] uppercase tracking-wider text-muted-foreground", children: slot.label }),
+              (item?.armorWeight || item?.shieldType) && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded border border-border text-muted-foreground", children: item.armorWeight ?? `${item.shieldType} shield` })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "select",
+              {
+                className: SELECT_CLASS$1,
+                value: equippedId,
+                onChange: (e) => e.target.value ? equipItem(c.id, slot.id, e.target.value) : unequipSlot(c.id, slot.id),
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "— Empty —" }),
+                  opts.map((it) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: it.id, children: it.name }, it.id))
+                ]
+              }
+            ),
+            item && weaponSummary(item.weapon) && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[11px] text-muted-foreground mt-2", children: weaponSummary(item.weapon) }),
+            item?.shieldAc != null && /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-[11px] text-primary mt-2", children: [
+              "+",
+              item.shieldAc,
+              " AC"
+            ] }),
+            item && /* @__PURE__ */ jsxRuntimeExports.jsx(ModChips, { item }),
+            item && /* @__PURE__ */ jsxRuntimeExports.jsx(StrWarning, { item, str })
+          ]
+        },
+        slot.id
+      );
+    }) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-[11px] uppercase tracking-wider text-muted-foreground", children: "Rings" }),
+      rings.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[11px] text-muted-foreground italic mt-1.5", children: "No ring items yet. Create one in the Inventory tab with type “Ring”." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-2 mt-1.5", children: rings.map((item) => {
+        const on = equippedIds.has(item.id);
+        return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          "div",
+          {
+            className: `rounded-md border p-2.5 ${on ? "border-primary/50 bg-primary/5" : "border-border bg-background/40"}`,
+            children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-2", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-display truncate", children: item.name }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "button",
+                  {
+                    onClick: () => toggleRing(item),
+                    className: `text-[11px] px-2 py-1 rounded border transition-colors flex items-center gap-1 shrink-0 ${on ? "border-primary/50 text-primary" : "border-border text-muted-foreground hover:border-primary/50"}`,
+                    children: on ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(Check, { className: "h-3 w-3" }),
+                      " Worn"
+                    ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(Plus, { className: "h-3 w-3" }),
+                      " Wear"
+                    ] })
+                  }
+                )
+              ] }),
+              on && /* @__PURE__ */ jsxRuntimeExports.jsx(ModChips, { item })
+            ]
+          },
+          item.id
+        );
+      }) })
+    ] })
+  ] });
+}
+function OverviewTab({ c }) {
+  const { update, setStat, toggleSave, cycleSkill } = useStore();
+  const all = activeEffects(c);
+  const effective = effectiveStats(c.stats, all);
+  const speedPenalty = equippedItems(c).some(
+    (it) => it.armorWeight === "Heavy" && it.strengthReq != null && c.stats.str < it.strengthReq
+  ) ? -10 : 0;
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("section", { className: "grimoire-card p-6", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-4 gap-4", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Name", className: "md:col-span-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+        Input,
+        {
+          value: c.name,
+          onChange: (e) => update(c.id, { name: e.target.value })
+        }
+      ) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Race", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+        Input,
+        {
+          value: c.race,
+          onChange: (e) => update(c.id, { race: e.target.value }),
+          placeholder: "Tiefling…"
+        }
+      ) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Class", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+        Input,
+        {
+          value: c.classSummary,
+          onChange: (e) => update(c.id, { classSummary: e.target.value }),
+          placeholder: "Warlock 3 / Bard 2"
+        }
+      ) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Level", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+        Input,
+        {
+          type: "number",
+          value: c.level,
+          onChange: (e) => update(c.id, { level: +e.target.value || 1 })
+        }
+      ) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "XP", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+        Input,
+        {
+          type: "number",
+          value: c.xp,
+          onChange: (e) => update(c.id, { xp: +e.target.value || 0 })
+        }
+      ) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Proficiency Bonus", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+        Input,
+        {
+          type: "number",
+          value: c.proficiencyBonus,
+          onChange: (e) => update(c.id, { proficiencyBonus: +e.target.value || 2 })
+        }
+      ) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Concentration", children: (() => {
+        const current = concentrationCount(c.effects);
+        const max = c.concentrationMax ?? 1;
+        return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-1.5", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "span",
+            {
+              className: `text-2xl font-display tabular-nums ${current > max ? "text-destructive" : current > 0 ? "text-primary" : ""}`,
+              children: current
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-muted-foreground", children: "/" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            Input,
+            {
+              type: "number",
+              min: 1,
+              value: max,
+              onChange: (e) => update(c.id, {
+                concentrationMax: Math.max(1, +e.target.value || 1)
+              }),
+              className: "w-16 text-center",
+              "aria-label": "Maximum concentration"
+            }
+          )
+        ] });
+      })() })
+    ] }) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "grid grid-cols-2 md:grid-cols-4 gap-4", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        VitalCard,
+        {
+          icon: /* @__PURE__ */ jsxRuntimeExports.jsx(Heart, { className: "h-4 w-4" }),
+          label: "Hit Points",
+          accent: "ember",
+          children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-1", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(HpInput, { value: c.hp, onCommit: (v) => update(c.id, { hp: v }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-muted-foreground", children: "/" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              HpInput,
+              {
+                value: c.maxHp,
+                onCommit: (v) => update(c.id, { maxHp: v })
+              }
+            )
+          ] })
+        }
+      ),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(VitalCard, { icon: /* @__PURE__ */ jsxRuntimeExports.jsx(Shield, { className: "h-4 w-4" }), label: "Armor Class", children: (() => {
+        const acBonus = sumEffectBonus(all, "ac");
+        return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            Input,
+            {
+              type: "number",
+              value: c.ac,
+              onChange: (e) => update(c.id, { ac: +e.target.value || 0 }),
+              className: `text-center text-2xl font-display h-12 ${acBonus !== 0 ? "pr-12" : ""}`
+            }
+          ),
+          acBonus !== 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "span",
+            {
+              className: `absolute right-2 top-1/2 -translate-y-1/2 text-sm font-display tabular-nums ${acBonus > 0 ? "text-primary" : "text-destructive"}`,
+              title: `Base ${c.ac}, ${acBonus > 0 ? `+${acBonus}` : acBonus} from effects & gear = ${c.ac + acBonus}`,
+              children: [
+                "= ",
+                c.ac + acBonus
+              ]
+            }
+          )
+        ] });
+      })() }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(VitalCard, { icon: /* @__PURE__ */ jsxRuntimeExports.jsx(Footprints, { className: "h-4 w-4" }), label: "Speed", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          Input,
+          {
+            type: "number",
+            value: c.speed,
+            onChange: (e) => update(c.id, { speed: +e.target.value || 0 }),
+            className: `text-center text-2xl font-display h-12 ${speedPenalty !== 0 ? "pr-12" : ""}`
+          }
+        ),
+        speedPenalty !== 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          "span",
+          {
+            className: "absolute right-2 top-1/2 -translate-y-1/2 text-sm font-display tabular-nums text-destructive",
+            title: `Heavy armor Strength requirement unmet: ${speedPenalty} ft = ${c.speed + speedPenalty}`,
+            children: [
+              "= ",
+              c.speed + speedPenalty
+            ]
+          }
+        )
+      ] }) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        VitalCard,
+        {
+          icon: /* @__PURE__ */ jsxRuntimeExports.jsx(Sparkles, { className: "h-4 w-4" }),
+          label: "Active Effects",
+          children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-2xl font-display h-12 flex items-center justify-center text-primary", children: c.effects.length })
+        }
+      ),
+      (() => {
+        const extraActions = sumEffectBonus(all, "extraAction");
+        if (extraActions === 0) return null;
+        return /* @__PURE__ */ jsxRuntimeExports.jsx(VitalCard, { icon: /* @__PURE__ */ jsxRuntimeExports.jsx(Zap, { className: "h-4 w-4" }), label: "Actions", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-2xl font-display h-12 flex items-center justify-center text-primary", children: [
+          1 + extraActions,
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-xs text-muted-foreground ml-1.5", children: [
+            "(",
+            extraActions > 0 ? `+${extraActions}` : extraActions,
+            ")"
+          ] })
+        ] }) });
+      })()
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "grimoire-card p-6", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "font-display text-lg mb-1", children: "Ability Scores" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-muted-foreground mb-4", children: "Base values; buffs, debuffs, and equipped gear apply automatically." }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3", children: STAT_KEYS.map((k) => {
+        const base = c.stats[k];
+        const eff = effective[k];
+        const diff = eff - base;
+        return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          "div",
+          {
+            className: "rounded-lg border border-border bg-secondary/40 p-3 text-center relative overflow-hidden",
+            children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] uppercase tracking-widest text-muted-foreground", children: STAT_LABELS[k] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                Input,
+                {
+                  type: "number",
+                  value: base,
+                  onChange: (e) => setStat(c.id, k, +e.target.value || 0),
+                  className: "my-2 text-center text-2xl font-display h-12 bg-background/40"
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "div",
+                {
+                  className: `text-lg font-display ${diff > 0 ? "text-primary" : diff < 0 ? "text-destructive" : ""}`,
+                  children: formatMod(modifier(eff))
+                }
+              ),
+              diff !== 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                "div",
+                {
+                  className: `text-[10px] mt-0.5 ${diff > 0 ? "text-primary" : "text-destructive"}`,
+                  children: [
+                    "(",
+                    eff,
+                    " ",
+                    diff > 0 ? `+${diff}` : diff,
+                    ")"
+                  ]
+                }
+              )
+            ]
+          },
+          k
+        );
+      }) })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 lg:grid-cols-2 gap-6", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "grimoire-card p-6", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "font-display text-lg mb-4", children: "Saving Throws" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", children: STAT_KEYS.map((k) => {
+          const mod = modifier(effective[k]) + (c.savingThrows[k] ? c.proficiencyBonus : 0) + sumSaveBonus(all, k);
+          return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "label",
+            {
+              className: "flex items-center gap-3 px-3 py-2 rounded-md hover:bg-muted/50 cursor-pointer",
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  Checkbox,
+                  {
+                    checked: c.savingThrows[k],
+                    onCheckedChange: () => toggleSave(c.id, k)
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "flex-1 text-sm", children: STAT_LABELS[k] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-display text-primary", children: formatMod(mod) })
+              ]
+            },
+            k
+          );
+        }) })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "grimoire-card p-6", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "font-display text-lg mb-1", children: "Skill Proficiencies" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[11px] text-muted-foreground mb-3", children: "Click to cycle: none → proficient → expertise." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-1", children: DEFAULT_SKILLS.map((s) => {
+          const ability = SKILL_ABILITY[s] ?? "int";
+          const isProf = c.skillProficiencies.includes(s);
+          const isExp = (c.skillExpertise ?? []).includes(s);
+          const pbMult = isExp ? 2 : isProf ? 1 : 0;
+          const bonus = modifier(effective[ability]) + pbMult * c.proficiencyBonus + sumSkillBonus(all, s);
+          return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "button",
+            {
+              type: "button",
+              onClick: () => cycleSkill(c.id, s),
+              className: "flex items-center gap-2 px-2 py-1.5 rounded text-sm hover:bg-muted/50 text-left",
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "span",
+                  {
+                    className: `inline-flex h-4 w-4 items-center justify-center rounded-sm border ${isExp ? "border-primary bg-primary/30 text-primary" : isProf ? "border-primary bg-primary/20 text-primary" : "border-border bg-background/40"}`,
+                    "aria-hidden": true,
+                    children: isExp ? /* @__PURE__ */ jsxRuntimeExports.jsx(Star, { className: "h-3 w-3 fill-current" }) : isProf ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "h-1.5 w-1.5 rounded-full bg-primary" }) : null
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex-1", children: [
+                  s,
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[10px] text-muted-foreground ml-1 uppercase", children: [
+                    "(",
+                    ability,
+                    ")"
+                  ] })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "span",
+                  {
+                    className: `font-display tabular-nums ${isExp ? "text-primary" : isProf ? "text-primary/80" : "text-muted-foreground"}`,
+                    children: formatMod(bonus)
+                  }
+                )
+              ]
+            },
+            s
+          );
+        }) })
+      ] })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(EquipmentBox, { c }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "grimoire-card p-6", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "font-display text-lg mb-3", children: "Notes & Backstory" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        Textarea,
+        {
+          rows: 6,
+          value: c.notes,
+          onChange: (e) => update(c.id, { notes: e.target.value }),
+          placeholder: "Born under a blood moon…"
+        }
+      )
+    ] })
+  ] });
+}
+function Field({
+  label,
+  children,
+  className = ""
+}) {
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className, children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs text-muted-foreground uppercase tracking-wider mb-1.5 block", children: label }),
+    children
+  ] });
+}
+function VitalCard({
+  icon,
+  label,
+  children,
+  accent
+}) {
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+    "div",
+    {
+      className: `grimoire-card p-4 ${accent === "ember" ? "ember-glow" : ""}`,
+      children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-1.5 text-xs uppercase tracking-widest text-muted-foreground mb-2", children: [
+          icon,
+          " ",
+          label
+        ] }),
+        children
+      ]
+    }
+  );
+}
+function HpInput({
+  value,
+  onCommit
+}) {
+  const [draft, setDraft] = reactExports.useState(String(value));
+  reactExports.useEffect(() => {
+    setDraft(String(value));
+  }, [value]);
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(
+    Input,
+    {
+      type: "number",
+      value: draft,
+      onChange: (e) => setDraft(e.target.value),
+      onBlur: () => onCommit(Number(draft) || 0),
+      onKeyDown: (e) => {
+        if (e.key === "Enter") {
+          onCommit(Number(draft) || 0);
+          e.target.blur();
+        }
+      },
+      className: "text-center text-2xl font-display h-12 min-w-[5.5rem]"
+    }
+  );
+}
 function ModifierEditor({
   mods,
   onChange,
@@ -990,54 +1303,54 @@ function ModifierEditor({
     })
   );
   const removeMod = (i) => onChange(mods.filter((_, idx) => idx !== i));
-  return /* @__PURE__ */ jsxs(Fragment, { children: [
-    /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between mb-2", children: [
-      /* @__PURE__ */ jsx(Label, { className: "text-xs uppercase tracking-wider text-muted-foreground", children: "Modifiers" }),
-      /* @__PURE__ */ jsxs(Button, { type: "button", size: "sm", variant: "outline", onClick: addMod, children: [
-        /* @__PURE__ */ jsx(Plus, { className: "h-3.5 w-3.5 mr-1" }),
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between mb-2", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs uppercase tracking-wider text-muted-foreground", children: "Modifiers" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs(Button, { type: "button", size: "sm", variant: "outline", onClick: addMod, children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(Plus, { className: "h-3.5 w-3.5 mr-1" }),
         " Add modifier"
       ] })
     ] }),
-    /* @__PURE__ */ jsxs("div", { className: "space-y-2", children: [
-      mods.length === 0 && /* @__PURE__ */ jsx("p", { className: "text-xs text-muted-foreground italic", children: emptyHint }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
+      mods.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-muted-foreground italic", children: emptyHint }),
       mods.map((m, i) => {
         const target = m.target ?? "stat";
-        return /* @__PURE__ */ jsxs(
+        return /* @__PURE__ */ jsxRuntimeExports.jsxs(
           "div",
           {
             className: "flex flex-wrap items-center gap-2 bg-secondary/40 rounded-md p-2 border border-border",
             children: [
-              /* @__PURE__ */ jsx(
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "select",
                 {
                   value: target,
                   onChange: (e) => updateMod(i, { target: e.target.value }),
                   className: "bg-input border border-border rounded-md px-2 py-1.5 text-sm flex-1 min-w-[10rem]",
-                  children: TARGET_OPTIONS.map((t) => /* @__PURE__ */ jsx("option", { value: t, children: MOD_TARGET_LABELS[t] }, t))
+                  children: TARGET_OPTIONS.map((t) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: t, children: MOD_TARGET_LABELS[t] }, t))
                 }
               ),
-              (target === "stat" || target === "save") && /* @__PURE__ */ jsxs(
+              (target === "stat" || target === "save") && /* @__PURE__ */ jsxRuntimeExports.jsxs(
                 "select",
                 {
                   value: m.stat ?? "str",
                   onChange: (e) => updateMod(i, { stat: e.target.value }),
                   className: "bg-input border border-border rounded-md px-2 py-1.5 text-sm flex-1 min-w-[8rem]",
                   children: [
-                    STAT_KEYS.map((k) => /* @__PURE__ */ jsx("option", { value: k, children: STAT_LABELS[k] }, k)),
-                    /* @__PURE__ */ jsx("option", { value: "all", children: "All Stats" })
+                    STAT_KEYS.map((k) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: k, children: STAT_LABELS[k] }, k)),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "all", children: "All Stats" })
                   ]
                 }
               ),
-              target === "skill" && /* @__PURE__ */ jsx(
+              target === "skill" && /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "select",
                 {
                   value: m.skill ?? DEFAULT_SKILLS[0],
                   onChange: (e) => updateMod(i, { skill: e.target.value }),
                   className: "bg-input border border-border rounded-md px-2 py-1.5 text-sm flex-1 min-w-[10rem]",
-                  children: DEFAULT_SKILLS.map((s) => /* @__PURE__ */ jsx("option", { value: s, children: s }, s))
+                  children: DEFAULT_SKILLS.map((s) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: s, children: s }, s))
                 }
               ),
-              /* @__PURE__ */ jsx(
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
                 Input,
                 {
                   type: "number",
@@ -1047,14 +1360,14 @@ function ModifierEditor({
                   placeholder: "±"
                 }
               ),
-              /* @__PURE__ */ jsx(
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
                 Button,
                 {
                   type: "button",
                   size: "icon",
                   variant: "ghost",
                   onClick: () => removeMod(i),
-                  children: /* @__PURE__ */ jsx(X, { className: "h-4 w-4" })
+                  children: /* @__PURE__ */ jsxRuntimeExports.jsx(X, { className: "h-4 w-4" })
                 }
               )
             ]
@@ -1068,11 +1381,11 @@ function ModifierEditor({
 function EffectsTab({ c }) {
   const { addEffect, removeEffect, saveEffectToLibrary, removeSavedEffect } = useStore();
   const savedEffects = useStore((s) => s.savedEffects);
-  const [kind, setKind] = useState("buff");
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [duration, setDuration] = useState("");
-  const [mods, setMods] = useState([]);
+  const [kind, setKind] = reactExports.useState("buff");
+  const [name, setName] = reactExports.useState("");
+  const [description, setDescription] = reactExports.useState("");
+  const [duration, setDuration] = reactExports.useState("");
+  const [mods, setMods] = reactExports.useState([]);
   const buildPayload = () => {
     if (!name.trim()) return null;
     return {
@@ -1127,14 +1440,14 @@ function EffectsTab({ c }) {
   };
   const buffs = c.effects.filter((e) => e.kind === "buff");
   const debuffs = c.effects.filter((e) => e.kind === "debuff");
-  return /* @__PURE__ */ jsxs("div", { className: "space-y-6", children: [
-    /* @__PURE__ */ jsxs("section", { className: "grimoire-card p-6", children: [
-      /* @__PURE__ */ jsx("h3", { className: "font-display text-lg mb-4", children: "Inscribe new effect" }),
-      /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-4", children: [
-        /* @__PURE__ */ jsxs("div", { children: [
-          /* @__PURE__ */ jsx(Label, { className: "text-xs uppercase tracking-wider text-muted-foreground", children: "Type" }),
-          /* @__PURE__ */ jsxs("div", { className: "flex gap-2 mt-1.5", children: [
-            /* @__PURE__ */ jsxs(
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "grimoire-card p-6", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "font-display text-lg mb-4", children: "Inscribe new effect" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs uppercase tracking-wider text-muted-foreground", children: "Type" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-2 mt-1.5", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(
               Button,
               {
                 type: "button",
@@ -1142,12 +1455,12 @@ function EffectsTab({ c }) {
                 onClick: () => setKind("buff"),
                 className: "flex-1",
                 children: [
-                  /* @__PURE__ */ jsx(ShieldPlus, { className: "h-4 w-4 mr-1.5" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(ShieldPlus, { className: "h-4 w-4 mr-1.5" }),
                   " Buff"
                 ]
               }
             ),
-            /* @__PURE__ */ jsxs(
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(
               Button,
               {
                 type: "button",
@@ -1155,16 +1468,16 @@ function EffectsTab({ c }) {
                 onClick: () => setKind("debuff"),
                 className: "flex-1",
                 children: [
-                  /* @__PURE__ */ jsx(ShieldOff, { className: "h-4 w-4 mr-1.5" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(ShieldOff, { className: "h-4 w-4 mr-1.5" }),
                   " Debuff"
                 ]
               }
             )
           ] })
         ] }),
-        /* @__PURE__ */ jsxs("div", { children: [
-          /* @__PURE__ */ jsx(Label, { className: "text-xs uppercase tracking-wider text-muted-foreground", children: "Duration" }),
-          /* @__PURE__ */ jsx(
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs uppercase tracking-wider text-muted-foreground", children: "Duration" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
             Input,
             {
               className: "mt-1.5",
@@ -1174,9 +1487,9 @@ function EffectsTab({ c }) {
             }
           )
         ] }),
-        /* @__PURE__ */ jsxs("div", { className: "md:col-span-2", children: [
-          /* @__PURE__ */ jsx(Label, { className: "text-xs uppercase tracking-wider text-muted-foreground", children: "Name" }),
-          /* @__PURE__ */ jsx(
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "md:col-span-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs uppercase tracking-wider text-muted-foreground", children: "Name" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
             Input,
             {
               className: "mt-1.5",
@@ -1186,9 +1499,9 @@ function EffectsTab({ c }) {
             }
           )
         ] }),
-        /* @__PURE__ */ jsxs("div", { className: "md:col-span-2", children: [
-          /* @__PURE__ */ jsx(Label, { className: "text-xs uppercase tracking-wider text-muted-foreground", children: "Description" }),
-          /* @__PURE__ */ jsx(
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "md:col-span-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs uppercase tracking-wider text-muted-foreground", children: "Description" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
             Textarea,
             {
               className: "mt-1.5",
@@ -1199,7 +1512,7 @@ function EffectsTab({ c }) {
             }
           )
         ] }),
-        /* @__PURE__ */ jsx("div", { className: "md:col-span-2", children: /* @__PURE__ */ jsx(
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
           ModifierEditor,
           {
             mods,
@@ -1208,36 +1521,36 @@ function EffectsTab({ c }) {
           }
         ) })
       ] }),
-      /* @__PURE__ */ jsxs("div", { className: "mt-5 flex flex-wrap gap-2", children: [
-        /* @__PURE__ */ jsxs(Button, { onClick: submit, children: [
-          /* @__PURE__ */ jsx(Plus, { className: "h-4 w-4 mr-1.5" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-5 flex flex-wrap gap-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(Button, { onClick: submit, children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Plus, { className: "h-4 w-4 mr-1.5" }),
           " Apply effect"
         ] }),
-        /* @__PURE__ */ jsxs(Button, { onClick: saveAndApply, variant: "secondary", children: [
-          /* @__PURE__ */ jsx(BookmarkPlus, { className: "h-4 w-4 mr-1.5" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(Button, { onClick: saveAndApply, variant: "secondary", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(BookmarkPlus, { className: "h-4 w-4 mr-1.5" }),
           " Apply & save to library"
         ] }),
-        /* @__PURE__ */ jsxs(Button, { onClick: saveOnly, variant: "outline", children: [
-          /* @__PURE__ */ jsx(BookMarked, { className: "h-4 w-4 mr-1.5" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(Button, { onClick: saveOnly, variant: "outline", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(BookMarked, { className: "h-4 w-4 mr-1.5" }),
           " Save to library"
         ] })
       ] })
     ] }),
-    /* @__PURE__ */ jsxs("section", { className: "grimoire-card p-5", children: [
-      /* @__PURE__ */ jsxs("h3", { className: "font-display text-lg mb-3 flex items-center gap-2", children: [
-        /* @__PURE__ */ jsx(BookMarked, { className: "h-4 w-4" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "grimoire-card p-5", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("h3", { className: "font-display text-lg mb-3 flex items-center gap-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(BookMarked, { className: "h-4 w-4" }),
         " Effect Library"
       ] }),
-      savedEffects.length === 0 ? /* @__PURE__ */ jsx("p", { className: "text-sm text-muted-foreground italic", children: "Saved buffs & debuffs land here, ready to reapply to any adventurer." }) : /* @__PURE__ */ jsx("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-3", children: savedEffects.map((e) => /* @__PURE__ */ jsxs(
+      savedEffects.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-muted-foreground italic", children: "Saved buffs & debuffs land here, ready to reapply to any adventurer." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-3", children: savedEffects.map((e) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
         "div",
         {
           className: "border border-border rounded-md p-3 bg-background/40",
           children: [
-            /* @__PURE__ */ jsxs("div", { className: "flex items-start justify-between gap-2", children: [
-              /* @__PURE__ */ jsxs("div", { children: [
-                /* @__PURE__ */ jsxs("div", { className: "font-display flex items-center gap-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between gap-2", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "font-display flex items-center gap-2", children: [
                   e.name,
-                  /* @__PURE__ */ jsx(
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
                     "span",
                     {
                       className: `text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded border ${e.kind === "buff" ? "border-primary/40 text-primary" : "border-destructive/40 text-destructive"}`,
@@ -1245,21 +1558,21 @@ function EffectsTab({ c }) {
                     }
                   )
                 ] }),
-                e.duration && /* @__PURE__ */ jsx("div", { className: "text-[11px] text-muted-foreground", children: e.duration })
+                e.duration && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[11px] text-muted-foreground", children: e.duration })
               ] }),
-              /* @__PURE__ */ jsx(
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "button",
                 {
                   onClick: () => removeSavedEffect(e.id),
                   className: "text-muted-foreground hover:text-destructive",
                   "aria-label": "Remove from library",
-                  children: /* @__PURE__ */ jsx(Trash2, { className: "h-4 w-4" })
+                  children: /* @__PURE__ */ jsxRuntimeExports.jsx(Trash2, { className: "h-4 w-4" })
                 }
               )
             ] }),
-            e.description && /* @__PURE__ */ jsx("p", { className: "text-sm mt-2 text-muted-foreground line-clamp-2", children: e.description }),
-            e.modifiers.length > 0 && /* @__PURE__ */ jsxs("div", { className: "flex flex-wrap gap-1.5 mt-2", children: [
-              e.modifiers.slice(0, 6).map((m, i) => /* @__PURE__ */ jsx(
+            e.description && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm mt-2 text-muted-foreground line-clamp-2", children: e.description }),
+            e.modifiers.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap gap-1.5 mt-2", children: [
+              e.modifiers.slice(0, 6).map((m, i) => /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "span",
                 {
                   className: "text-[11px] font-mono px-2 py-0.5 rounded border border-border text-muted-foreground",
@@ -1267,13 +1580,13 @@ function EffectsTab({ c }) {
                 },
                 i
               )),
-              e.modifiers.length > 6 && /* @__PURE__ */ jsxs("span", { className: "text-[11px] text-muted-foreground", children: [
+              e.modifiers.length > 6 && /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[11px] text-muted-foreground", children: [
                 "+",
                 e.modifiers.length - 6,
                 " more"
               ] })
             ] }),
-            /* @__PURE__ */ jsxs(
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(
               Button,
               {
                 size: "sm",
@@ -1281,7 +1594,7 @@ function EffectsTab({ c }) {
                 className: "mt-3 w-full",
                 onClick: () => applySaved(e),
                 children: [
-                  /* @__PURE__ */ jsx(Wand2, { className: "h-3.5 w-3.5 mr-1.5" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(WandSparkles, { className: "h-3.5 w-3.5 mr-1.5" }),
                   " Apply to",
                   " ",
                   c.name || "character"
@@ -1293,8 +1606,8 @@ function EffectsTab({ c }) {
         e.id
       )) })
     ] }),
-    /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-1 lg:grid-cols-2 gap-6", children: [
-      /* @__PURE__ */ jsx(
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 lg:grid-cols-2 gap-6", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
         EffectColumn,
         {
           title: "Buffs",
@@ -1304,7 +1617,7 @@ function EffectsTab({ c }) {
           accent: "primary"
         }
       ),
-      /* @__PURE__ */ jsx(
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
         EffectColumn,
         {
           title: "Debuffs",
@@ -1324,35 +1637,35 @@ function EffectColumn({
   onRemove,
   accent
 }) {
-  return /* @__PURE__ */ jsxs("section", { className: "grimoire-card p-5", children: [
-    /* @__PURE__ */ jsx(
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "grimoire-card p-5", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
       "h3",
       {
         className: `font-display text-lg mb-3 ${accent === "primary" ? "text-primary" : "text-destructive"}`,
         children: title
       }
     ),
-    items.length === 0 ? /* @__PURE__ */ jsx("p", { className: "text-sm text-muted-foreground italic", children: emptyText }) : /* @__PURE__ */ jsx("div", { className: "space-y-3", children: items.map((e) => /* @__PURE__ */ jsxs(
+    items.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-muted-foreground italic", children: emptyText }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: items.map((e) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
       "div",
       {
         className: "border border-border rounded-md p-3 bg-background/40",
         children: [
-          /* @__PURE__ */ jsxs("div", { className: "flex items-start justify-between gap-2", children: [
-            /* @__PURE__ */ jsxs("div", { children: [
-              /* @__PURE__ */ jsx("div", { className: "font-display", children: e.name }),
-              e.duration && /* @__PURE__ */ jsx("div", { className: "text-[11px] text-muted-foreground", children: e.duration })
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between gap-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-display", children: e.name }),
+              e.duration && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[11px] text-muted-foreground", children: e.duration })
             ] }),
-            /* @__PURE__ */ jsx(
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
               "button",
               {
                 onClick: () => onRemove(e.id),
                 className: "text-muted-foreground hover:text-destructive",
-                children: /* @__PURE__ */ jsx(Trash2, { className: "h-4 w-4" })
+                children: /* @__PURE__ */ jsxRuntimeExports.jsx(Trash2, { className: "h-4 w-4" })
               }
             )
           ] }),
-          e.description && /* @__PURE__ */ jsx("p", { className: "text-sm mt-2 text-muted-foreground", children: e.description }),
-          e.modifiers.length > 0 && /* @__PURE__ */ jsx("div", { className: "flex flex-wrap gap-1.5 mt-2", children: e.modifiers.map((m, i) => /* @__PURE__ */ jsx(
+          e.description && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm mt-2 text-muted-foreground", children: e.description }),
+          e.modifiers.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap gap-1.5 mt-2", children: e.modifiers.map((m, i) => /* @__PURE__ */ jsxRuntimeExports.jsx(
             "span",
             {
               className: `text-[11px] font-mono px-2 py-0.5 rounded border ${m.delta >= 0 ? "border-primary/40 bg-primary/10 text-primary" : "border-destructive/40 bg-destructive/10 text-destructive"}`,
@@ -1392,11 +1705,11 @@ const toHomebrewSpell = (s) => ({
   description: s.description,
   concentration: s.concentration
 });
-const Dialog = DialogPrimitive.Root;
-const DialogTrigger = DialogPrimitive.Trigger;
-const DialogPortal = DialogPrimitive.Portal;
-const DialogOverlay = React.forwardRef(({ className, ...props }, ref) => /* @__PURE__ */ jsx(
-  DialogPrimitive.Overlay,
+const Dialog = Root;
+const DialogTrigger = Trigger$1;
+const DialogPortal = Portal;
+const DialogOverlay = reactExports.forwardRef(({ className, ...props }, ref) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+  Overlay,
   {
     ref,
     className: cn(
@@ -1406,11 +1719,11 @@ const DialogOverlay = React.forwardRef(({ className, ...props }, ref) => /* @__P
     ...props
   }
 ));
-DialogOverlay.displayName = DialogPrimitive.Overlay.displayName;
-const DialogContent = React.forwardRef(({ className, children, ...props }, ref) => /* @__PURE__ */ jsxs(DialogPortal, { children: [
-  /* @__PURE__ */ jsx(DialogOverlay, {}),
-  /* @__PURE__ */ jsxs(
-    DialogPrimitive.Content,
+DialogOverlay.displayName = Overlay.displayName;
+const DialogContent = reactExports.forwardRef(({ className, children, ...props }, ref) => /* @__PURE__ */ jsxRuntimeExports.jsxs(DialogPortal, { children: [
+  /* @__PURE__ */ jsxRuntimeExports.jsx(DialogOverlay, {}),
+  /* @__PURE__ */ jsxRuntimeExports.jsxs(
+    Content$1,
     {
       ref,
       className: cn(
@@ -1420,18 +1733,18 @@ const DialogContent = React.forwardRef(({ className, children, ...props }, ref) 
       ...props,
       children: [
         children,
-        /* @__PURE__ */ jsxs(DialogPrimitive.Close, { className: "absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background cursor-pointer transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground", children: [
-          /* @__PURE__ */ jsx(X, { className: "h-4 w-4" }),
-          /* @__PURE__ */ jsx("span", { className: "sr-only", children: "Close" })
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(Close, { className: "absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background cursor-pointer transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(X, { className: "h-4 w-4" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "sr-only", children: "Close" })
         ] })
       ]
     }
   )
 ] }));
-DialogContent.displayName = DialogPrimitive.Content.displayName;
-const DialogHeader = ({ className, ...props }) => /* @__PURE__ */ jsx("div", { className: cn("flex flex-col space-y-1.5 text-center sm:text-left", className), ...props });
+DialogContent.displayName = Content$1.displayName;
+const DialogHeader = ({ className, ...props }) => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: cn("flex flex-col space-y-1.5 text-center sm:text-left", className), ...props });
 DialogHeader.displayName = "DialogHeader";
-const DialogFooter = ({ className, ...props }) => /* @__PURE__ */ jsx(
+const DialogFooter = ({ className, ...props }) => /* @__PURE__ */ jsxRuntimeExports.jsx(
   "div",
   {
     className: cn("flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2", className),
@@ -1439,35 +1752,35 @@ const DialogFooter = ({ className, ...props }) => /* @__PURE__ */ jsx(
   }
 );
 DialogFooter.displayName = "DialogFooter";
-const DialogTitle = React.forwardRef(({ className, ...props }, ref) => /* @__PURE__ */ jsx(
-  DialogPrimitive.Title,
+const DialogTitle = reactExports.forwardRef(({ className, ...props }, ref) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+  Title,
   {
     ref,
     className: cn("text-lg font-semibold leading-none tracking-tight", className),
     ...props
   }
 ));
-DialogTitle.displayName = DialogPrimitive.Title.displayName;
-const DialogDescription = React.forwardRef(({ className, ...props }, ref) => /* @__PURE__ */ jsx(
-  DialogPrimitive.Description,
+DialogTitle.displayName = Title.displayName;
+const DialogDescription = reactExports.forwardRef(({ className, ...props }, ref) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+  Description,
   {
     ref,
     className: cn("text-sm text-muted-foreground", className),
     ...props
   }
 ));
-DialogDescription.displayName = DialogPrimitive.Description.displayName;
+DialogDescription.displayName = Description.displayName;
 const levelLabel = (lvl) => lvl === 0 ? "Cantrips" : `Level ${lvl}`;
 function SrdSpellPicker({ c }) {
   const addSpell = useStore((s) => s.addSpell);
-  const [open, setOpen] = useState(false);
-  const [cls, setCls] = useState("Wizard");
-  const [query, setQuery] = useState("");
-  const existing = useMemo(
+  const [open, setOpen] = reactExports.useState(false);
+  const [cls, setCls] = reactExports.useState("Wizard");
+  const [query, setQuery] = reactExports.useState("");
+  const existing = reactExports.useMemo(
     () => new Set(c.spells.map((s) => s.name.trim().toLowerCase())),
     [c.spells]
   );
-  const groups = useMemo(() => {
+  const groups = reactExports.useMemo(() => {
     const q = query.trim().toLowerCase();
     const list = spellsForClass(cls).filter(
       (s) => !q || s.name.toLowerCase().includes(q)
@@ -1483,25 +1796,25 @@ function SrdSpellPicker({ c }) {
     addSpell(c.id, toHomebrewSpell(s));
     toast.success(`Added ${s.name}`, { description: levelLabel(s.level) });
   };
-  return /* @__PURE__ */ jsxs(Dialog, { open, onOpenChange: setOpen, children: [
-    /* @__PURE__ */ jsx(DialogTrigger, { asChild: true, children: /* @__PURE__ */ jsxs(Button, { variant: "outline", children: [
-      /* @__PURE__ */ jsx(BookPlus, { className: "h-4 w-4 mr-1.5" }),
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs(Dialog, { open, onOpenChange: setOpen, children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx(DialogTrigger, { asChild: true, children: /* @__PURE__ */ jsxRuntimeExports.jsxs(Button, { variant: "outline", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(BookPlus, { className: "h-4 w-4 mr-1.5" }),
       " Add D&D Spell"
     ] }) }),
-    /* @__PURE__ */ jsxs(DialogContent, { className: "max-w-2xl", children: [
-      /* @__PURE__ */ jsxs(DialogHeader, { children: [
-        /* @__PURE__ */ jsxs(DialogTitle, { className: "flex items-center gap-2", children: [
-          /* @__PURE__ */ jsx(ScrollText, { className: "h-4 w-4 text-primary" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs(DialogContent, { className: "max-w-2xl", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs(DialogHeader, { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(DialogTitle, { className: "flex items-center gap-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(ScrollText, { className: "h-4 w-4 text-primary" }),
           " Add a D&D Spell"
         ] }),
-        /* @__PURE__ */ jsxs(DialogDescription, { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(DialogDescription, { children: [
           "Browse the SRD 5.1 spell list by class, then level. Adds a full copy to ",
           c.name || "this character",
           "'s spellbook."
         ] })
       ] }),
-      /* @__PURE__ */ jsxs("div", { className: "flex flex-wrap gap-1.5", children: [
-        /* @__PURE__ */ jsx(
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap gap-1.5", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
           ClassChip,
           {
             label: "All",
@@ -1509,7 +1822,7 @@ function SrdSpellPicker({ c }) {
             onClick: () => setCls(null)
           }
         ),
-        SRD_CLASSES.map((name) => /* @__PURE__ */ jsx(
+        SRD_CLASSES.map((name) => /* @__PURE__ */ jsxRuntimeExports.jsx(
           ClassChip,
           {
             label: name,
@@ -1519,9 +1832,9 @@ function SrdSpellPicker({ c }) {
           name
         ))
       ] }),
-      /* @__PURE__ */ jsxs("div", { className: "relative", children: [
-        /* @__PURE__ */ jsx(Search, { className: "absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" }),
-        /* @__PURE__ */ jsx(
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(Search, { className: "absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
           Input,
           {
             value: query,
@@ -1531,25 +1844,25 @@ function SrdSpellPicker({ c }) {
           }
         )
       ] }),
-      /* @__PURE__ */ jsx("div", { className: "max-h-[45vh] overflow-y-auto pr-1 -mr-1 space-y-4", children: total === 0 ? /* @__PURE__ */ jsx("p", { className: "text-sm text-muted-foreground italic py-6 text-center", children: "No spells match." }) : groups.map(([lvl, list]) => /* @__PURE__ */ jsxs("div", { children: [
-        /* @__PURE__ */ jsx("h4", { className: "font-display text-xs uppercase tracking-widest text-primary mb-2 sticky top-0 bg-background/95 py-1", children: levelLabel(lvl) }),
-        /* @__PURE__ */ jsx("div", { className: "space-y-1.5", children: list.map((s) => {
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-h-[45vh] overflow-y-auto pr-1 -mr-1 space-y-4", children: total === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-muted-foreground italic py-6 text-center", children: "No spells match." }) : groups.map(([lvl, list]) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "font-display text-xs uppercase tracking-widest text-primary mb-2 sticky top-0 bg-background/95 py-1", children: levelLabel(lvl) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-1.5", children: list.map((s) => {
           const added = existing.has(s.name.trim().toLowerCase());
-          return /* @__PURE__ */ jsxs(
+          return /* @__PURE__ */ jsxRuntimeExports.jsxs(
             "div",
             {
               className: "flex items-center justify-between gap-3 border border-border rounded-md px-3 py-2 bg-background/40",
               children: [
-                /* @__PURE__ */ jsxs("div", { className: "min-w-0", children: [
-                  /* @__PURE__ */ jsxs("div", { className: "font-display flex items-center gap-1.5 flex-wrap", children: [
-                    /* @__PURE__ */ jsx("span", { className: "truncate", children: s.name }),
-                    s.concentration && /* @__PURE__ */ jsxs("span", { className: "text-[9px] uppercase tracking-wider px-1 py-0.5 rounded border border-primary/40 text-primary flex items-center gap-0.5", children: [
-                      /* @__PURE__ */ jsx(Brain, { className: "h-2.5 w-2.5" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "font-display flex items-center gap-1.5 flex-wrap", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate", children: s.name }),
+                    s.concentration && /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[9px] uppercase tracking-wider px-1 py-0.5 rounded border border-primary/40 text-primary flex items-center gap-0.5", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(Brain, { className: "h-2.5 w-2.5" }),
                       " Conc"
                     ] }),
-                    s.ritual && /* @__PURE__ */ jsx("span", { className: "text-[9px] uppercase tracking-wider px-1 py-0.5 rounded border border-border text-muted-foreground", children: "Ritual" })
+                    s.ritual && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[9px] uppercase tracking-wider px-1 py-0.5 rounded border border-border text-muted-foreground", children: "Ritual" })
                   ] }),
-                  /* @__PURE__ */ jsxs("div", { className: "text-[11px] text-muted-foreground truncate", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-[11px] text-muted-foreground truncate", children: [
                     s.school,
                     " · ",
                     s.castingTime,
@@ -1557,7 +1870,7 @@ function SrdSpellPicker({ c }) {
                     s.range
                   ] })
                 ] }),
-                /* @__PURE__ */ jsx(
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
                   Button,
                   {
                     size: "sm",
@@ -1565,8 +1878,8 @@ function SrdSpellPicker({ c }) {
                     disabled: added,
                     onClick: () => add(s),
                     className: "shrink-0",
-                    children: added ? /* @__PURE__ */ jsxs(Fragment, { children: [
-                      /* @__PURE__ */ jsx(Check, { className: "h-3.5 w-3.5 mr-1" }),
+                    children: added ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(Check, { className: "h-3.5 w-3.5 mr-1" }),
                       " Added"
                     ] }) : "Add"
                   }
@@ -1577,7 +1890,7 @@ function SrdSpellPicker({ c }) {
           );
         }) })
       ] }, lvl)) }),
-      /* @__PURE__ */ jsx("p", { className: "text-[10px] text-muted-foreground border-t border-border pt-2", children: SRD_ATTRIBUTION })
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] text-muted-foreground border-t border-border pt-2", children: SRD_ATTRIBUTION })
     ] })
   ] });
 }
@@ -1586,7 +1899,7 @@ function ClassChip({
   active,
   onClick
 }) {
-  return /* @__PURE__ */ jsx(
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(
     "button",
     {
       type: "button",
@@ -1618,10 +1931,11 @@ const blankForm = {
   concentration: false
 };
 function SpellsTab({ c }) {
-  const { addSpell, removeSpell, addEffect, removeEffect } = useStore();
-  const [form, setForm] = useState(blankForm);
-  const [mods, setMods] = useState([]);
-  const [dialog, setDialog] = useState(null);
+  const { addSpell, removeSpell, updateSpell, addEffect, removeEffect } = useStore();
+  const [form, setForm] = reactExports.useState(blankForm);
+  const [mods, setMods] = reactExports.useState([]);
+  const [editingId, setEditingId] = reactExports.useState(null);
+  const [dialog, setDialog] = reactExports.useState(null);
   const max = c.concentrationMax ?? 1;
   const activeConc = c.effects.filter((e) => e.concentration);
   const isActive = (name) => c.effects.some(
@@ -1629,11 +1943,38 @@ function SpellsTab({ c }) {
   );
   const submit = () => {
     if (!form.name.trim()) return;
-    addSpell(c.id, {
+    const payload = {
       ...form,
       name: form.name.trim(),
       modifiers: expandMods(mods)
+    };
+    if (editingId) {
+      updateSpell(c.id, editingId, payload);
+      toast.success(`Saved ${payload.name}`);
+    } else {
+      addSpell(c.id, payload);
+    }
+    setForm(blankForm);
+    setMods([]);
+    setEditingId(null);
+  };
+  const startEdit = (s) => {
+    setEditingId(s.id);
+    setForm({
+      name: s.name,
+      level: s.level,
+      school: s.school,
+      castingTime: s.castingTime,
+      range: s.range,
+      duration: s.duration,
+      description: s.description,
+      concentration: !!s.concentration
     });
+    setMods(s.modifiers ?? []);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+  const cancelEdit = () => {
+    setEditingId(null);
     setForm(blankForm);
     setMods([]);
   };
@@ -1686,20 +2027,23 @@ function SpellsTab({ c }) {
     return acc;
   }, {});
   const levels = Object.keys(grouped).map(Number).sort((a, b) => a - b);
-  return /* @__PURE__ */ jsxs("div", { className: "space-y-6", children: [
-    /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between gap-3", children: [
-      /* @__PURE__ */ jsx("p", { className: "text-sm text-muted-foreground", children: "Pull a spell from the official 5e list, or scribe your own below." }),
-      /* @__PURE__ */ jsx(SrdSpellPicker, { c })
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-3", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-muted-foreground", children: "Pull a spell from the official 5e list, or scribe your own below." }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(SrdSpellPicker, { c })
     ] }),
-    /* @__PURE__ */ jsxs("section", { className: "grimoire-card p-6", children: [
-      /* @__PURE__ */ jsxs("h3", { className: "font-display text-lg mb-4 flex items-center gap-2", children: [
-        /* @__PURE__ */ jsx(Sparkles, { className: "h-4 w-4 text-primary" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "grimoire-card p-6", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "font-display text-lg mb-4 flex items-center gap-2", children: editingId ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(Pencil, { className: "h-4 w-4 text-primary" }),
+        " Edit spell"
+      ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(Sparkles, { className: "h-4 w-4 text-primary" }),
         " Inscribe homebrew spell"
-      ] }),
-      /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-1 md:grid-cols-6 gap-3", children: [
-        /* @__PURE__ */ jsxs("div", { className: "md:col-span-3", children: [
-          /* @__PURE__ */ jsx(Label, { className: "text-xs uppercase text-muted-foreground", children: "Name" }),
-          /* @__PURE__ */ jsx(
+      ] }) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-6 gap-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "md:col-span-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs uppercase text-muted-foreground", children: "Name" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
             Input,
             {
               value: form.name,
@@ -1708,9 +2052,9 @@ function SpellsTab({ c }) {
             }
           )
         ] }),
-        /* @__PURE__ */ jsxs("div", { children: [
-          /* @__PURE__ */ jsx(Label, { className: "text-xs uppercase text-muted-foreground", children: "Level" }),
-          /* @__PURE__ */ jsx(
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs uppercase text-muted-foreground", children: "Level" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
             Input,
             {
               type: "number",
@@ -1721,21 +2065,21 @@ function SpellsTab({ c }) {
             }
           )
         ] }),
-        /* @__PURE__ */ jsxs("div", { className: "md:col-span-2", children: [
-          /* @__PURE__ */ jsx(Label, { className: "text-xs uppercase text-muted-foreground", children: "School" }),
-          /* @__PURE__ */ jsx(
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "md:col-span-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs uppercase text-muted-foreground", children: "School" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
             "select",
             {
               value: form.school,
               onChange: (e) => setForm({ ...form, school: e.target.value }),
               className: "w-full bg-input border border-border rounded-md px-3 py-2 text-sm",
-              children: SCHOOLS.map((s) => /* @__PURE__ */ jsx("option", { children: s }, s))
+              children: SCHOOLS.map((s) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { children: s }, s))
             }
           )
         ] }),
-        /* @__PURE__ */ jsxs("div", { className: "md:col-span-2", children: [
-          /* @__PURE__ */ jsx(Label, { className: "text-xs uppercase text-muted-foreground", children: "Casting Time" }),
-          /* @__PURE__ */ jsx(
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "md:col-span-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs uppercase text-muted-foreground", children: "Casting Time" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
             Input,
             {
               value: form.castingTime,
@@ -1743,9 +2087,9 @@ function SpellsTab({ c }) {
             }
           )
         ] }),
-        /* @__PURE__ */ jsxs("div", { className: "md:col-span-2", children: [
-          /* @__PURE__ */ jsx(Label, { className: "text-xs uppercase text-muted-foreground", children: "Range" }),
-          /* @__PURE__ */ jsx(
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "md:col-span-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs uppercase text-muted-foreground", children: "Range" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
             Input,
             {
               value: form.range,
@@ -1753,9 +2097,9 @@ function SpellsTab({ c }) {
             }
           )
         ] }),
-        /* @__PURE__ */ jsxs("div", { className: "md:col-span-2", children: [
-          /* @__PURE__ */ jsx(Label, { className: "text-xs uppercase text-muted-foreground", children: "Duration" }),
-          /* @__PURE__ */ jsx(
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "md:col-span-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs uppercase text-muted-foreground", children: "Duration" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
             Input,
             {
               value: form.duration,
@@ -1763,8 +2107,8 @@ function SpellsTab({ c }) {
             }
           )
         ] }),
-        /* @__PURE__ */ jsxs("div", { className: "md:col-span-6 flex items-center gap-2", children: [
-          /* @__PURE__ */ jsx(
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "md:col-span-6 flex items-center gap-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
             Checkbox,
             {
               id: "spell-concentration",
@@ -1772,21 +2116,21 @@ function SpellsTab({ c }) {
               onCheckedChange: (v) => setForm({ ...form, concentration: !!v })
             }
           ),
-          /* @__PURE__ */ jsxs(
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(
             Label,
             {
               htmlFor: "spell-concentration",
               className: "text-sm cursor-pointer flex items-center gap-1.5",
               children: [
-                /* @__PURE__ */ jsx(Brain, { className: "h-3.5 w-3.5 text-primary" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(Brain, { className: "h-3.5 w-3.5 text-primary" }),
                 " Requires concentration"
               ]
             }
           )
         ] }),
-        /* @__PURE__ */ jsxs("div", { className: "md:col-span-6", children: [
-          /* @__PURE__ */ jsx(Label, { className: "text-xs uppercase text-muted-foreground", children: "Description" }),
-          /* @__PURE__ */ jsx(
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "md:col-span-6", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs uppercase text-muted-foreground", children: "Description" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
             Textarea,
             {
               rows: 3,
@@ -1795,7 +2139,7 @@ function SpellsTab({ c }) {
             }
           )
         ] }),
-        /* @__PURE__ */ jsx("div", { className: "md:col-span-6", children: /* @__PURE__ */ jsx(
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-6", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
           ModifierEditor,
           {
             mods,
@@ -1804,56 +2148,77 @@ function SpellsTab({ c }) {
           }
         ) })
       ] }),
-      /* @__PURE__ */ jsxs(Button, { onClick: submit, className: "mt-4", children: [
-        /* @__PURE__ */ jsx(Plus, { className: "h-4 w-4 mr-1.5" }),
-        " Add spell"
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 flex gap-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(Button, { onClick: submit, children: editingId ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Save, { className: "h-4 w-4 mr-1.5" }),
+          " Save changes"
+        ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Plus, { className: "h-4 w-4 mr-1.5" }),
+          " Add spell"
+        ] }) }),
+        editingId && /* @__PURE__ */ jsxRuntimeExports.jsxs(Button, { variant: "outline", onClick: cancelEdit, children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(X, { className: "h-4 w-4 mr-1.5" }),
+          " Cancel"
+        ] })
       ] })
     ] }),
-    levels.length === 0 ? /* @__PURE__ */ jsx("div", { className: "grimoire-card p-12 text-center text-muted-foreground italic", children: "The spellbook is empty. Scribe your first incantation above." }) : levels.map((lvl) => /* @__PURE__ */ jsxs("section", { className: "grimoire-card p-5", children: [
-      /* @__PURE__ */ jsx("h4", { className: "font-display text-sm uppercase tracking-widest text-primary mb-3", children: lvl === 0 ? "Cantrips" : `Level ${lvl}` }),
-      /* @__PURE__ */ jsx("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-3", children: grouped[lvl].map((s) => {
+    levels.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grimoire-card p-12 text-center text-muted-foreground italic", children: "The spellbook is empty. Scribe your first incantation above." }) : levels.map((lvl) => /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "grimoire-card p-5", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "font-display text-sm uppercase tracking-widest text-primary mb-3", children: lvl === 0 ? "Cantrips" : `Level ${lvl}` }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-3", children: grouped[lvl].map((s) => {
         const hasMods = !!s.modifiers?.length;
-        return /* @__PURE__ */ jsxs(
+        return /* @__PURE__ */ jsxRuntimeExports.jsxs(
           "div",
           {
             className: "border border-border rounded-md p-3 bg-background/40",
             children: [
-              /* @__PURE__ */ jsxs("div", { className: "flex items-start justify-between gap-2", children: [
-                /* @__PURE__ */ jsxs("div", { children: [
-                  /* @__PURE__ */ jsxs("div", { className: "font-display flex items-center gap-2", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between gap-2", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "font-display flex items-center gap-2", children: [
                     s.name,
-                    s.concentration && /* @__PURE__ */ jsxs("span", { className: "text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded border border-primary/40 text-primary flex items-center gap-1", children: [
-                      /* @__PURE__ */ jsx(Brain, { className: "h-3 w-3" }),
+                    s.concentration && /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded border border-primary/40 text-primary flex items-center gap-1", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(Brain, { className: "h-3 w-3" }),
                       " Conc."
                     ] })
                   ] }),
-                  /* @__PURE__ */ jsx("div", { className: "text-[11px] text-muted-foreground", children: s.school })
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[11px] text-muted-foreground", children: s.school })
                 ] }),
-                /* @__PURE__ */ jsx(
-                  "button",
-                  {
-                    onClick: () => removeSpell(c.id, s.id),
-                    className: "text-muted-foreground hover:text-destructive",
-                    children: /* @__PURE__ */ jsx(Trash2, { className: "h-4 w-4" })
-                  }
-                )
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-1.5 shrink-0", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "button",
+                    {
+                      onClick: () => startEdit(s),
+                      className: "text-muted-foreground hover:text-primary",
+                      "aria-label": "Edit spell",
+                      children: /* @__PURE__ */ jsxRuntimeExports.jsx(Pencil, { className: "h-4 w-4" })
+                    }
+                  ),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "button",
+                    {
+                      onClick: () => removeSpell(c.id, s.id),
+                      className: "text-muted-foreground hover:text-destructive",
+                      "aria-label": "Remove spell",
+                      children: /* @__PURE__ */ jsxRuntimeExports.jsx(Trash2, { className: "h-4 w-4" })
+                    }
+                  )
+                ] })
               ] }),
-              /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-3 gap-2 text-[11px] text-muted-foreground mt-2", children: [
-                /* @__PURE__ */ jsxs("div", { children: [
-                  /* @__PURE__ */ jsx("span", { className: "block uppercase text-[9px]", children: "Cast" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-3 gap-2 text-[11px] text-muted-foreground mt-2", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block uppercase text-[9px]", children: "Cast" }),
                   s.castingTime
                 ] }),
-                /* @__PURE__ */ jsxs("div", { children: [
-                  /* @__PURE__ */ jsx("span", { className: "block uppercase text-[9px]", children: "Range" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block uppercase text-[9px]", children: "Range" }),
                   s.range
                 ] }),
-                /* @__PURE__ */ jsxs("div", { children: [
-                  /* @__PURE__ */ jsx("span", { className: "block uppercase text-[9px]", children: "Dur" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block uppercase text-[9px]", children: "Dur" }),
                   s.duration
                 ] })
               ] }),
-              s.description && /* @__PURE__ */ jsx("p", { className: "text-sm mt-2 text-muted-foreground whitespace-pre-wrap", children: s.description }),
-              hasMods && /* @__PURE__ */ jsx("div", { className: "flex flex-wrap gap-1.5 mt-2", children: s.modifiers.map((m, i) => /* @__PURE__ */ jsx(
+              s.description && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm mt-2 text-muted-foreground whitespace-pre-wrap", children: s.description }),
+              hasMods && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap gap-1.5 mt-2", children: s.modifiers.map((m, i) => /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "span",
                 {
                   className: `text-[11px] font-mono px-2 py-0.5 rounded border ${m.delta >= 0 ? "border-primary/40 bg-primary/10 text-primary" : "border-destructive/40 bg-destructive/10 text-destructive"}`,
@@ -1861,7 +2226,7 @@ function SpellsTab({ c }) {
                 },
                 i
               )) }),
-              (hasMods || s.concentration) && /* @__PURE__ */ jsxs(
+              (hasMods || s.concentration) && /* @__PURE__ */ jsxRuntimeExports.jsxs(
                 Button,
                 {
                   size: "sm",
@@ -1869,7 +2234,7 @@ function SpellsTab({ c }) {
                   className: "mt-3 w-full",
                   onClick: () => cast(s),
                   children: [
-                    /* @__PURE__ */ jsx(Wand2, { className: "h-3.5 w-3.5 mr-1.5" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(WandSparkles, { className: "h-3.5 w-3.5 mr-1.5" }),
                     " Cast",
                     s.concentration ? "" : " (apply as effect)"
                   ]
@@ -1881,16 +2246,16 @@ function SpellsTab({ c }) {
         );
       }) })
     ] }, lvl)),
-    /* @__PURE__ */ jsx(Dialog, { open: !!dialog, onOpenChange: (open) => !open && setDialog(null), children: /* @__PURE__ */ jsxs(DialogContent, { children: [
-      dialog?.stage === "ask" && /* @__PURE__ */ jsxs(Fragment, { children: [
-        /* @__PURE__ */ jsxs(DialogHeader, { children: [
-          /* @__PURE__ */ jsxs(DialogTitle, { className: "flex items-center gap-2", children: [
-            /* @__PURE__ */ jsx(Brain, { className: "h-4 w-4 text-primary" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(Dialog, { open: !!dialog, onOpenChange: (open) => !open && setDialog(null), children: /* @__PURE__ */ jsxRuntimeExports.jsxs(DialogContent, { children: [
+      dialog?.stage === "ask" && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(DialogHeader, { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(DialogTitle, { className: "flex items-center gap-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Brain, { className: "h-4 w-4 text-primary" }),
             " Are you concentrating on ",
             dialog.spell.name,
             "?"
           ] }),
-          /* @__PURE__ */ jsxs(DialogDescription, { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(DialogDescription, { children: [
             "If you cast this spell, answer Yes. If someone else cast it on you, they hold concentration — answer No and it won't count against your limit (",
             concentrationCount(c.effects),
             "/",
@@ -1898,24 +2263,24 @@ function SpellsTab({ c }) {
             ")."
           ] })
         ] }),
-        /* @__PURE__ */ jsxs(DialogFooter, { className: "gap-2 sm:gap-2", children: [
-          /* @__PURE__ */ jsx(Button, { variant: "outline", onClick: castNotConcentrating, children: "No, someone else is" }),
-          /* @__PURE__ */ jsxs(Button, { onClick: castConcentrating, children: [
-            /* @__PURE__ */ jsx(Brain, { className: "h-4 w-4 mr-1.5" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(DialogFooter, { className: "gap-2 sm:gap-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Button, { variant: "outline", onClick: castNotConcentrating, children: "No, someone else is" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(Button, { onClick: castConcentrating, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Brain, { className: "h-4 w-4 mr-1.5" }),
             " Yes, I'm concentrating"
           ] })
         ] })
       ] }),
-      dialog?.stage === "drop" && /* @__PURE__ */ jsxs(Fragment, { children: [
-        /* @__PURE__ */ jsxs(DialogHeader, { children: [
-          /* @__PURE__ */ jsxs(DialogTitle, { children: [
+      dialog?.stage === "drop" && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(DialogHeader, { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(DialogTitle, { children: [
             "Concentration limit reached (",
             concentrationCount(c.effects),
             "/",
             max,
             ")"
           ] }),
-          /* @__PURE__ */ jsxs(DialogDescription, { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(DialogDescription, { children: [
             "You can't concentrate on ",
             dialog.spell.name,
             " as well. Choose a spell to stop concentrating on — it will be dropped and",
@@ -1924,78 +2289,78 @@ function SpellsTab({ c }) {
             " applied."
           ] })
         ] }),
-        /* @__PURE__ */ jsx("div", { className: "space-y-2 py-2", children: activeConc.map((e) => /* @__PURE__ */ jsxs(
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2 py-2", children: activeConc.map((e) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
           "button",
           {
             onClick: () => dropAndCast(e.id),
             className: "w-full text-left border border-border rounded-md p-3 bg-background/40 hover:border-destructive hover:bg-destructive/10 transition-colors",
             children: [
-              /* @__PURE__ */ jsx("div", { className: "font-display", children: e.name }),
-              e.duration && /* @__PURE__ */ jsx("div", { className: "text-[11px] text-muted-foreground", children: e.duration })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-display", children: e.name }),
+              e.duration && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[11px] text-muted-foreground", children: e.duration })
             ]
           },
           e.id
         )) }),
-        /* @__PURE__ */ jsx(DialogFooter, { children: /* @__PURE__ */ jsx(Button, { variant: "outline", onClick: () => setDialog(null), children: "Cancel" }) })
+        /* @__PURE__ */ jsxRuntimeExports.jsx(DialogFooter, { children: /* @__PURE__ */ jsxRuntimeExports.jsx(Button, { variant: "outline", onClick: () => setDialog(null), children: "Cancel" }) })
       ] })
     ] }) })
   ] });
 }
 function AbilitiesTab({ c }) {
   const { addAbility, removeAbility } = useStore();
-  const [form, setForm] = useState({ name: "", source: "", uses: "", description: "" });
+  const [form, setForm] = reactExports.useState({ name: "", source: "", uses: "", description: "" });
   const submit = () => {
     if (!form.name.trim()) return;
     addAbility(c.id, { ...form, name: form.name.trim() });
     setForm({ name: "", source: "", uses: "", description: "" });
   };
-  return /* @__PURE__ */ jsxs("div", { className: "space-y-6", children: [
-    /* @__PURE__ */ jsxs("section", { className: "grimoire-card p-6", children: [
-      /* @__PURE__ */ jsxs("h3", { className: "font-display text-lg mb-4 flex items-center gap-2", children: [
-        /* @__PURE__ */ jsx(Zap, { className: "h-4 w-4 text-primary" }),
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "grimoire-card p-6", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("h3", { className: "font-display text-lg mb-4 flex items-center gap-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(Zap, { className: "h-4 w-4 text-primary" }),
         " Forge homebrew ability"
       ] }),
-      /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-1 md:grid-cols-3 gap-3", children: [
-        /* @__PURE__ */ jsxs("div", { children: [
-          /* @__PURE__ */ jsx(Label, { className: "text-xs uppercase text-muted-foreground", children: "Name" }),
-          /* @__PURE__ */ jsx(Input, { value: form.name, onChange: (e) => setForm({ ...form, name: e.target.value }), placeholder: "Soul Burn" })
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-3 gap-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs uppercase text-muted-foreground", children: "Name" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Input, { value: form.name, onChange: (e) => setForm({ ...form, name: e.target.value }), placeholder: "Soul Burn" })
         ] }),
-        /* @__PURE__ */ jsxs("div", { children: [
-          /* @__PURE__ */ jsx(Label, { className: "text-xs uppercase text-muted-foreground", children: "Source" }),
-          /* @__PURE__ */ jsx(Input, { value: form.source, onChange: (e) => setForm({ ...form, source: e.target.value }), placeholder: "Warlock 3, Racial…" })
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs uppercase text-muted-foreground", children: "Source" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Input, { value: form.source, onChange: (e) => setForm({ ...form, source: e.target.value }), placeholder: "Warlock 3, Racial…" })
         ] }),
-        /* @__PURE__ */ jsxs("div", { children: [
-          /* @__PURE__ */ jsx(Label, { className: "text-xs uppercase text-muted-foreground", children: "Uses" }),
-          /* @__PURE__ */ jsx(Input, { value: form.uses, onChange: (e) => setForm({ ...form, uses: e.target.value }), placeholder: "3 / long rest" })
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs uppercase text-muted-foreground", children: "Uses" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Input, { value: form.uses, onChange: (e) => setForm({ ...form, uses: e.target.value }), placeholder: "3 / long rest" })
         ] }),
-        /* @__PURE__ */ jsxs("div", { className: "md:col-span-3", children: [
-          /* @__PURE__ */ jsx(Label, { className: "text-xs uppercase text-muted-foreground", children: "Description" }),
-          /* @__PURE__ */ jsx(Textarea, { rows: 3, value: form.description, onChange: (e) => setForm({ ...form, description: e.target.value }) })
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "md:col-span-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs uppercase text-muted-foreground", children: "Description" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Textarea, { rows: 3, value: form.description, onChange: (e) => setForm({ ...form, description: e.target.value }) })
         ] })
       ] }),
-      /* @__PURE__ */ jsxs(Button, { onClick: submit, className: "mt-4", children: [
-        /* @__PURE__ */ jsx(Plus, { className: "h-4 w-4 mr-1.5" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs(Button, { onClick: submit, className: "mt-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(Plus, { className: "h-4 w-4 mr-1.5" }),
         " Add ability"
       ] })
     ] }),
-    c.abilities.length === 0 ? /* @__PURE__ */ jsx("div", { className: "grimoire-card p-12 text-center text-muted-foreground italic", children: "No abilities yet." }) : /* @__PURE__ */ jsx("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-3", children: c.abilities.map((a) => /* @__PURE__ */ jsxs("div", { className: "grimoire-card p-4", children: [
-      /* @__PURE__ */ jsxs("div", { className: "flex items-start justify-between gap-2", children: [
-        /* @__PURE__ */ jsxs("div", { children: [
-          /* @__PURE__ */ jsx("div", { className: "font-display", children: a.name }),
-          /* @__PURE__ */ jsxs("div", { className: "text-[11px] text-muted-foreground", children: [
+    c.abilities.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grimoire-card p-12 text-center text-muted-foreground italic", children: "No abilities yet." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-3", children: c.abilities.map((a) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grimoire-card p-4", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between gap-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-display", children: a.name }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-[11px] text-muted-foreground", children: [
             a.source,
             a.uses && ` · ${a.uses}`
           ] })
         ] }),
-        /* @__PURE__ */ jsx("button", { onClick: () => removeAbility(c.id, a.id), className: "text-muted-foreground hover:text-destructive", children: /* @__PURE__ */ jsx(Trash2, { className: "h-4 w-4" }) })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => removeAbility(c.id, a.id), className: "text-muted-foreground hover:text-destructive", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Trash2, { className: "h-4 w-4" }) })
       ] }),
-      a.description && /* @__PURE__ */ jsx("p", { className: "text-sm mt-2 text-muted-foreground whitespace-pre-wrap", children: a.description })
+      a.description && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm mt-2 text-muted-foreground whitespace-pre-wrap", children: a.description })
     ] }, a.id)) })
   ] });
 }
 function ClassesTab({ c }) {
   const { addClass, removeClass, setLevelTable } = useStore();
-  const [form, setForm] = useState({ name: "", description: "", hitDie: "d8", primaryStat: "str" });
+  const [form, setForm] = reactExports.useState({ name: "", description: "", hitDie: "d8", primaryStat: "str" });
   const submit = () => {
     if (!form.name.trim()) return;
     addClass(c.id, { ...form, name: form.name.trim() });
@@ -2007,82 +2372,82 @@ function ClassesTab({ c }) {
     { level: (c.levelTable[c.levelTable.length - 1]?.level ?? 0) + 1, className: c.classes[0]?.name ?? "", features: "", xpRequired: 0 }
   ]);
   const removeRow = (i) => setLevelTable(c.id, c.levelTable.filter((_, idx) => idx !== i));
-  return /* @__PURE__ */ jsxs("div", { className: "space-y-6", children: [
-    /* @__PURE__ */ jsxs("section", { className: "grimoire-card p-6", children: [
-      /* @__PURE__ */ jsxs("h3", { className: "font-display text-lg mb-4 flex items-center gap-2", children: [
-        /* @__PURE__ */ jsx(Crown, { className: "h-4 w-4 text-primary" }),
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "grimoire-card p-6", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("h3", { className: "font-display text-lg mb-4 flex items-center gap-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(Crown, { className: "h-4 w-4 text-primary" }),
         " Forge homebrew class"
       ] }),
-      /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-1 md:grid-cols-4 gap-3", children: [
-        /* @__PURE__ */ jsxs("div", { className: "md:col-span-2", children: [
-          /* @__PURE__ */ jsx(Label, { className: "text-xs uppercase text-muted-foreground", children: "Class name" }),
-          /* @__PURE__ */ jsx(Input, { value: form.name, onChange: (e) => setForm({ ...form, name: e.target.value }), placeholder: "Ember Walker" })
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-4 gap-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "md:col-span-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs uppercase text-muted-foreground", children: "Class name" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Input, { value: form.name, onChange: (e) => setForm({ ...form, name: e.target.value }), placeholder: "Ember Walker" })
         ] }),
-        /* @__PURE__ */ jsxs("div", { children: [
-          /* @__PURE__ */ jsx(Label, { className: "text-xs uppercase text-muted-foreground", children: "Hit die" }),
-          /* @__PURE__ */ jsx(Input, { value: form.hitDie, onChange: (e) => setForm({ ...form, hitDie: e.target.value }), placeholder: "d10" })
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs uppercase text-muted-foreground", children: "Hit die" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Input, { value: form.hitDie, onChange: (e) => setForm({ ...form, hitDie: e.target.value }), placeholder: "d10" })
         ] }),
-        /* @__PURE__ */ jsxs("div", { children: [
-          /* @__PURE__ */ jsx(Label, { className: "text-xs uppercase text-muted-foreground", children: "Primary stat" }),
-          /* @__PURE__ */ jsx(
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs uppercase text-muted-foreground", children: "Primary stat" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
             "select",
             {
               value: form.primaryStat,
               onChange: (e) => setForm({ ...form, primaryStat: e.target.value }),
               className: "w-full bg-input border border-border rounded-md px-3 py-2 text-sm",
-              children: STAT_KEYS.map((k) => /* @__PURE__ */ jsx("option", { value: k, children: STAT_LABELS[k] }, k))
+              children: STAT_KEYS.map((k) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: k, children: STAT_LABELS[k] }, k))
             }
           )
         ] }),
-        /* @__PURE__ */ jsxs("div", { className: "md:col-span-4", children: [
-          /* @__PURE__ */ jsx(Label, { className: "text-xs uppercase text-muted-foreground", children: "Description" }),
-          /* @__PURE__ */ jsx(Textarea, { rows: 3, value: form.description, onChange: (e) => setForm({ ...form, description: e.target.value }) })
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "md:col-span-4", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs uppercase text-muted-foreground", children: "Description" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Textarea, { rows: 3, value: form.description, onChange: (e) => setForm({ ...form, description: e.target.value }) })
         ] })
       ] }),
-      /* @__PURE__ */ jsxs(Button, { onClick: submit, className: "mt-4", children: [
-        /* @__PURE__ */ jsx(Plus, { className: "h-4 w-4 mr-1.5" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs(Button, { onClick: submit, className: "mt-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(Plus, { className: "h-4 w-4 mr-1.5" }),
         " Add class"
       ] }),
-      c.classes.length > 0 && /* @__PURE__ */ jsx("div", { className: "mt-5 grid grid-cols-1 md:grid-cols-2 gap-3", children: c.classes.map((cl) => /* @__PURE__ */ jsxs("div", { className: "border border-border rounded-md p-3 bg-background/40", children: [
-        /* @__PURE__ */ jsxs("div", { className: "flex items-start justify-between", children: [
-          /* @__PURE__ */ jsxs("div", { children: [
-            /* @__PURE__ */ jsx("div", { className: "font-display", children: cl.name }),
-            /* @__PURE__ */ jsxs("div", { className: "text-[11px] text-muted-foreground", children: [
+      c.classes.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-5 grid grid-cols-1 md:grid-cols-2 gap-3", children: c.classes.map((cl) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border border-border rounded-md p-3 bg-background/40", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-display", children: cl.name }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-[11px] text-muted-foreground", children: [
               cl.hitDie,
               " · ",
               cl.primaryStat && STAT_LABELS[cl.primaryStat]
             ] })
           ] }),
-          /* @__PURE__ */ jsx("button", { onClick: () => removeClass(c.id, cl.id), className: "text-muted-foreground hover:text-destructive", children: /* @__PURE__ */ jsx(Trash2, { className: "h-4 w-4" }) })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => removeClass(c.id, cl.id), className: "text-muted-foreground hover:text-destructive", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Trash2, { className: "h-4 w-4" }) })
         ] }),
-        cl.description && /* @__PURE__ */ jsx("p", { className: "text-sm mt-2 text-muted-foreground whitespace-pre-wrap", children: cl.description })
+        cl.description && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm mt-2 text-muted-foreground whitespace-pre-wrap", children: cl.description })
       ] }, cl.id)) })
     ] }),
-    /* @__PURE__ */ jsxs("section", { className: "grimoire-card p-6", children: [
-      /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between mb-4", children: [
-        /* @__PURE__ */ jsxs("h3", { className: "font-display text-lg flex items-center gap-2", children: [
-          /* @__PURE__ */ jsx(TrendingUp, { className: "h-4 w-4 text-primary" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "grimoire-card p-6", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between mb-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("h3", { className: "font-display text-lg flex items-center gap-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(TrendingUp, { className: "h-4 w-4 text-primary" }),
           " Custom leveling track"
         ] }),
-        /* @__PURE__ */ jsxs(Button, { size: "sm", variant: "outline", onClick: addRow, children: [
-          /* @__PURE__ */ jsx(Plus, { className: "h-3.5 w-3.5 mr-1" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(Button, { size: "sm", variant: "outline", onClick: addRow, children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Plus, { className: "h-3.5 w-3.5 mr-1" }),
           " Add level"
         ] })
       ] }),
-      c.levelTable.length === 0 ? /* @__PURE__ */ jsx("p", { className: "text-sm text-muted-foreground italic", children: "Define your own milestones, XP thresholds, and feature unlocks per level." }) : /* @__PURE__ */ jsx("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxs("table", { className: "w-full text-sm", children: [
-        /* @__PURE__ */ jsx("thead", { children: /* @__PURE__ */ jsxs("tr", { className: "text-left text-[11px] uppercase tracking-widest text-muted-foreground border-b border-border", children: [
-          /* @__PURE__ */ jsx("th", { className: "py-2 px-2 w-16", children: "Lv" }),
-          /* @__PURE__ */ jsx("th", { className: "py-2 px-2 w-40", children: "Class" }),
-          /* @__PURE__ */ jsx("th", { className: "py-2 px-2 w-28", children: "XP" }),
-          /* @__PURE__ */ jsx("th", { className: "py-2 px-2", children: "Features unlocked" }),
-          /* @__PURE__ */ jsx("th", { className: "py-2 px-2 w-10" })
+      c.levelTable.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-muted-foreground italic", children: "Define your own milestones, XP thresholds, and feature unlocks per level." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "w-full text-sm", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "text-left text-[11px] uppercase tracking-widest text-muted-foreground border-b border-border", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 w-16", children: "Lv" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 w-40", children: "Class" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 w-28", children: "XP" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2", children: "Features unlocked" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 w-10" })
         ] }) }),
-        /* @__PURE__ */ jsx("tbody", { children: c.levelTable.map((r, i) => /* @__PURE__ */ jsxs("tr", { className: "border-b border-border/60", children: [
-          /* @__PURE__ */ jsx("td", { className: "py-1.5 px-1", children: /* @__PURE__ */ jsx(Input, { type: "number", value: r.level, onChange: (e) => updateRow(i, { level: +e.target.value || 1 }), className: "h-8" }) }),
-          /* @__PURE__ */ jsx("td", { className: "py-1.5 px-1", children: /* @__PURE__ */ jsx(Input, { value: r.className, onChange: (e) => updateRow(i, { className: e.target.value }), className: "h-8" }) }),
-          /* @__PURE__ */ jsx("td", { className: "py-1.5 px-1", children: /* @__PURE__ */ jsx(Input, { type: "number", value: r.xpRequired ?? 0, onChange: (e) => updateRow(i, { xpRequired: +e.target.value || 0 }), className: "h-8" }) }),
-          /* @__PURE__ */ jsx("td", { className: "py-1.5 px-1", children: /* @__PURE__ */ jsx(Input, { value: r.features, onChange: (e) => updateRow(i, { features: e.target.value }), className: "h-8", placeholder: "Eldritch Surge, +1 ASI…" }) }),
-          /* @__PURE__ */ jsx("td", { className: "py-1.5 px-1", children: /* @__PURE__ */ jsx("button", { onClick: () => removeRow(i), className: "text-muted-foreground hover:text-destructive", children: /* @__PURE__ */ jsx(Trash2, { className: "h-4 w-4" }) }) })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { children: c.levelTable.map((r, i) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "border-b border-border/60", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1.5 px-1", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Input, { type: "number", value: r.level, onChange: (e) => updateRow(i, { level: +e.target.value || 1 }), className: "h-8" }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1.5 px-1", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Input, { value: r.className, onChange: (e) => updateRow(i, { className: e.target.value }), className: "h-8" }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1.5 px-1", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Input, { type: "number", value: r.xpRequired ?? 0, onChange: (e) => updateRow(i, { xpRequired: +e.target.value || 0 }), className: "h-8" }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1.5 px-1", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Input, { value: r.features, onChange: (e) => updateRow(i, { features: e.target.value }), className: "h-8", placeholder: "Eldritch Surge, +1 ASI…" }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1.5 px-1", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => removeRow(i), className: "text-muted-foreground hover:text-destructive", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Trash2, { className: "h-4 w-4" }) }) })
         ] }, i)) })
       ] }) })
     ] })
@@ -2122,6 +2487,7 @@ const groupItems = (mode, items) => {
     (a, b) => order.indexOf(a[0]) - order.indexOf(b[0])
   );
 };
+const slotForCategory = (category) => category === "Weapon" ? "Weapon" : category === "Armor" ? "Chest" : void 0;
 const toInventoryItem = (s) => ({
   name: s.name,
   kind: s.kind,
@@ -2130,19 +2496,20 @@ const toInventoryItem = (s) => ({
   quantity: 1,
   weight: s.weight,
   cost: s.cost,
-  description: s.description
+  description: s.description,
+  slot: slotForCategory(s.category)
 });
 function SrdItemPicker({ c }) {
   const addItem = useStore((s) => s.addItem);
-  const [open, setOpen] = useState(false);
-  const [mode, setMode] = useState("gear");
-  const [filter, setFilter] = useState(null);
-  const [query, setQuery] = useState("");
-  const existing = useMemo(
+  const [open, setOpen] = reactExports.useState(false);
+  const [mode, setMode] = reactExports.useState("gear");
+  const [filter, setFilter] = reactExports.useState(null);
+  const [query, setQuery] = reactExports.useState("");
+  const existing = reactExports.useMemo(
     () => new Set((c.inventory ?? []).map((i) => i.name.trim().toLowerCase())),
     [c.inventory]
   );
-  const groups = useMemo(() => {
+  const groups = reactExports.useMemo(() => {
     const q = query.trim().toLowerCase();
     const list = itemsFor(mode, filter).filter(
       (i) => !q || i.name.toLowerCase().includes(q)
@@ -2163,52 +2530,52 @@ function SrdItemPicker({ c }) {
     addItem(c.id, toInventoryItem(s));
     toast.success(`Added ${s.name}`);
   };
-  return /* @__PURE__ */ jsxs(Dialog, { open, onOpenChange: setOpen, children: [
-    /* @__PURE__ */ jsx(DialogTrigger, { asChild: true, children: /* @__PURE__ */ jsxs(Button, { variant: "outline", children: [
-      /* @__PURE__ */ jsx(PackagePlus, { className: "h-4 w-4 mr-1.5" }),
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs(Dialog, { open, onOpenChange: setOpen, children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx(DialogTrigger, { asChild: true, children: /* @__PURE__ */ jsxRuntimeExports.jsxs(Button, { variant: "outline", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(PackagePlus, { className: "h-4 w-4 mr-1.5" }),
       " Add D&D Item"
     ] }) }),
-    /* @__PURE__ */ jsxs(DialogContent, { className: "max-w-2xl", children: [
-      /* @__PURE__ */ jsxs(DialogHeader, { children: [
-        /* @__PURE__ */ jsxs(DialogTitle, { className: "flex items-center gap-2", children: [
-          /* @__PURE__ */ jsx(PackagePlus, { className: "h-4 w-4 text-primary" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs(DialogContent, { className: "max-w-2xl", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs(DialogHeader, { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(DialogTitle, { className: "flex items-center gap-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(PackagePlus, { className: "h-4 w-4 text-primary" }),
           " Add a D&D Item"
         ] }),
-        /* @__PURE__ */ jsxs(DialogDescription, { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(DialogDescription, { children: [
           "Browse the SRD 5.1 equipment and magic items. Adds a copy to",
           " ",
           c.name || "this character",
           "'s inventory."
         ] })
       ] }),
-      /* @__PURE__ */ jsxs("div", { className: "flex gap-2", children: [
-        /* @__PURE__ */ jsxs(
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(
           Button,
           {
             variant: mode === "gear" ? "default" : "outline",
             onClick: () => switchMode("gear"),
             className: "flex-1",
             children: [
-              /* @__PURE__ */ jsx(Sword, { className: "h-4 w-4 mr-1.5" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(Sword, { className: "h-4 w-4 mr-1.5" }),
               " Equipment"
             ]
           }
         ),
-        /* @__PURE__ */ jsxs(
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(
           Button,
           {
             variant: mode === "magic" ? "default" : "outline",
             onClick: () => switchMode("magic"),
             className: "flex-1",
             children: [
-              /* @__PURE__ */ jsx(Sparkles, { className: "h-4 w-4 mr-1.5" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(Sparkles, { className: "h-4 w-4 mr-1.5" }),
               " Magic Items"
             ]
           }
         )
       ] }),
-      /* @__PURE__ */ jsxs("div", { className: "flex flex-wrap gap-1.5", children: [
-        /* @__PURE__ */ jsx(
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap gap-1.5", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
           FilterChip,
           {
             label: "All",
@@ -2216,7 +2583,7 @@ function SrdItemPicker({ c }) {
             onClick: () => setFilter(null)
           }
         ),
-        chips.map((label) => /* @__PURE__ */ jsx(
+        chips.map((label) => /* @__PURE__ */ jsxRuntimeExports.jsx(
           FilterChip,
           {
             label,
@@ -2226,9 +2593,9 @@ function SrdItemPicker({ c }) {
           label
         ))
       ] }),
-      /* @__PURE__ */ jsxs("div", { className: "relative", children: [
-        /* @__PURE__ */ jsx(Search, { className: "absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" }),
-        /* @__PURE__ */ jsx(
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(Search, { className: "absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
           Input,
           {
             value: query,
@@ -2238,20 +2605,20 @@ function SrdItemPicker({ c }) {
           }
         )
       ] }),
-      /* @__PURE__ */ jsx("div", { className: "max-h-[42vh] overflow-y-auto pr-1 -mr-1 space-y-4", children: total === 0 ? /* @__PURE__ */ jsx("p", { className: "text-sm text-muted-foreground italic py-6 text-center", children: "No items match." }) : groups.map(([label, list]) => /* @__PURE__ */ jsxs("div", { children: [
-        /* @__PURE__ */ jsx("h4", { className: "font-display text-xs uppercase tracking-widest text-primary mb-2 sticky top-0 bg-background/95 py-1", children: label }),
-        /* @__PURE__ */ jsx("div", { className: "space-y-1.5", children: list.map((s) => {
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-h-[42vh] overflow-y-auto pr-1 -mr-1 space-y-4", children: total === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-muted-foreground italic py-6 text-center", children: "No items match." }) : groups.map(([label, list]) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "font-display text-xs uppercase tracking-widest text-primary mb-2 sticky top-0 bg-background/95 py-1", children: label }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-1.5", children: list.map((s) => {
           const added = existing.has(s.name.trim().toLowerCase());
-          return /* @__PURE__ */ jsxs(
+          return /* @__PURE__ */ jsxRuntimeExports.jsxs(
             "div",
             {
               className: "flex items-center justify-between gap-3 border border-border rounded-md px-3 py-2 bg-background/40",
               children: [
-                /* @__PURE__ */ jsxs("div", { className: "min-w-0", children: [
-                  /* @__PURE__ */ jsx("div", { className: "font-display truncate", children: s.name }),
-                  /* @__PURE__ */ jsx("div", { className: "text-[11px] text-muted-foreground truncate", children: [s.category, s.rarity, s.cost, s.weight].filter(Boolean).join(" · ") })
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-display truncate", children: s.name }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[11px] text-muted-foreground truncate", children: [s.category, s.rarity, s.cost, s.weight].filter(Boolean).join(" · ") })
                 ] }),
-                /* @__PURE__ */ jsx(
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
                   Button,
                   {
                     size: "sm",
@@ -2259,8 +2626,8 @@ function SrdItemPicker({ c }) {
                     disabled: added,
                     onClick: () => add(s),
                     className: "shrink-0",
-                    children: added ? /* @__PURE__ */ jsxs(Fragment, { children: [
-                      /* @__PURE__ */ jsx(Check, { className: "h-3.5 w-3.5 mr-1" }),
+                    children: added ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(Check, { className: "h-3.5 w-3.5 mr-1" }),
                       " Added"
                     ] }) : "Add"
                   }
@@ -2271,7 +2638,7 @@ function SrdItemPicker({ c }) {
           );
         }) })
       ] }, label)) }),
-      /* @__PURE__ */ jsx("p", { className: "text-[10px] text-muted-foreground border-t border-border pt-2", children: SRD_ATTRIBUTION })
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] text-muted-foreground border-t border-border pt-2", children: SRD_ATTRIBUTION })
     ] })
   ] });
 }
@@ -2280,7 +2647,7 @@ function FilterChip({
   active,
   onClick
 }) {
-  return /* @__PURE__ */ jsx(
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(
     "button",
     {
       type: "button",
@@ -2296,32 +2663,124 @@ const blankItem = {
   quantity: 1,
   weight: "",
   cost: "",
-  description: ""
+  description: "",
+  slot: "",
+  strengthReq: "",
+  armorWeight: "",
+  shieldType: "",
+  shieldAc: ""
 };
+const blankWeapon = {
+  category: "",
+  type: "",
+  // a WEAPON_TYPES value, or "Custom"
+  customType: "",
+  // free text when type === "Custom"
+  damage: "",
+  damageType: "",
+  range: "",
+  versatileDamage: "",
+  properties: []
+};
+const SELECT_CLASS = "w-full bg-input border border-border rounded-md px-3 py-2 text-sm mt-0";
 const carriedWeight = (items) => items.reduce((total, it) => {
   const n = parseFloat(it.weight ?? "");
   return total + (isNaN(n) ? 0 : n * it.quantity);
 }, 0);
 function InventoryTab({ c }) {
   const { addItem, removeItem, updateItem } = useStore();
-  const [form, setForm] = useState(blankItem);
-  const [mods, setMods] = useState([]);
+  const [form, setForm] = reactExports.useState(blankItem);
+  const [weapon, setWeapon] = reactExports.useState(blankWeapon);
+  const [mods, setMods] = reactExports.useState([]);
+  const [editingId, setEditingId] = reactExports.useState(null);
   const inventory = c.inventory ?? [];
+  const isWeapon = form.slot === "Weapon";
+  const isShield = form.slot === "Shield";
+  const showArmorFields = !["Ring", "Cloak", "Weapon", "Shield"].includes(
+    form.slot
+  );
+  const toggleProp = (p) => setWeapon((w) => ({
+    ...w,
+    properties: w.properties.includes(p) ? w.properties.filter((x) => x !== p) : [...w.properties, p]
+  }));
+  const buildWeapon = () => {
+    const resolvedType = weapon.type === "Custom" ? weapon.customType.trim() || void 0 : weapon.type || void 0;
+    const w = {
+      category: weapon.category || void 0,
+      type: resolvedType,
+      damage: weapon.damage.trim() || void 0,
+      damageType: weapon.damageType || void 0,
+      range: weapon.range.trim() || void 0,
+      versatileDamage: weapon.properties.includes("Versatile") ? weapon.versatileDamage.trim() || void 0 : void 0,
+      properties: weapon.properties.length ? weapon.properties : void 0
+    };
+    return Object.values(w).some((v) => v !== void 0) ? w : void 0;
+  };
   const submit = () => {
     if (!form.name.trim()) return;
-    const added = addItem(c.id, {
+    const base = {
       name: form.name.trim(),
-      kind: "custom",
       category: form.category.trim() || "Custom",
       quantity: Math.max(1, form.quantity || 1),
       weight: form.weight.trim() || void 0,
       cost: form.cost.trim() || void 0,
       description: form.description.trim(),
+      slot: form.slot || void 0,
+      strengthReq: showArmorFields && form.strengthReq ? Number(form.strengthReq) : void 0,
+      armorWeight: showArmorFields ? form.armorWeight || void 0 : void 0,
+      weapon: isWeapon ? buildWeapon() : void 0,
+      shieldType: isShield ? form.shieldType || void 0 : void 0,
+      shieldAc: isShield && form.shieldAc ? Number(form.shieldAc) : void 0,
       modifiers: mods.length ? expandMods(mods) : void 0
-    });
-    if (added) toast.success(`Added ${form.name.trim()}`);
-    else toast.warning(`${form.name.trim()} is already in your inventory`);
+    };
+    if (editingId) {
+      updateItem(c.id, editingId, base);
+      toast.success(`Saved ${base.name}`);
+    } else {
+      const added = addItem(c.id, { ...base, kind: "custom" });
+      if (added) toast.success(`Added ${base.name}`);
+      else toast.warning(`${base.name} is already in your inventory`);
+    }
     setForm(blankItem);
+    setWeapon(blankWeapon);
+    setMods([]);
+    setEditingId(null);
+  };
+  const startEdit = (it) => {
+    setEditingId(it.id);
+    setForm({
+      name: it.name,
+      category: it.category,
+      quantity: it.quantity,
+      weight: it.weight ?? "",
+      cost: it.cost ?? "",
+      description: it.description,
+      slot: it.slot ?? "",
+      strengthReq: it.strengthReq != null ? String(it.strengthReq) : "",
+      armorWeight: it.armorWeight ?? "",
+      shieldType: it.shieldType ?? "",
+      shieldAc: it.shieldAc != null ? String(it.shieldAc) : ""
+    });
+    setWeapon(
+      it.weapon ? {
+        category: it.weapon.category ?? "",
+        // A saved type not in the standard list is treated as custom.
+        type: it.weapon.type ? WEAPON_TYPES.includes(it.weapon.type) ? it.weapon.type : "Custom" : "",
+        customType: it.weapon.type && !WEAPON_TYPES.includes(it.weapon.type) ? it.weapon.type : "",
+        damage: it.weapon.damage ?? "",
+        damageType: it.weapon.damageType ?? "",
+        range: it.weapon.range ?? "",
+        versatileDamage: it.weapon.versatileDamage ?? "",
+        properties: it.weapon.properties ?? []
+      } : blankWeapon
+    );
+    setMods(it.modifiers ?? []);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+  const cancelEdit = () => {
+    setEditingId(null);
+    setForm(blankItem);
+    setWeapon(blankWeapon);
     setMods([]);
   };
   const grouped = inventory.reduce(
@@ -2333,20 +2792,23 @@ function InventoryTab({ c }) {
   );
   const categories = Object.keys(grouped).sort();
   const weight = carriedWeight(inventory);
-  return /* @__PURE__ */ jsxs("div", { className: "space-y-6", children: [
-    /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between gap-3 flex-wrap", children: [
-      /* @__PURE__ */ jsx("p", { className: "text-sm text-muted-foreground", children: "Pull gear and magic items from the official 5e list, or add your own below." }),
-      /* @__PURE__ */ jsx(SrdItemPicker, { c })
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-3 flex-wrap", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-muted-foreground", children: "Pull gear and magic items from the official 5e list, or add your own below." }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(SrdItemPicker, { c })
     ] }),
-    /* @__PURE__ */ jsxs("section", { className: "grimoire-card p-6", children: [
-      /* @__PURE__ */ jsxs("h3", { className: "font-display text-lg mb-4 flex items-center gap-2", children: [
-        /* @__PURE__ */ jsx(Package, { className: "h-4 w-4 text-primary" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "grimoire-card p-6", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "font-display text-lg mb-4 flex items-center gap-2", children: editingId ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(Pencil, { className: "h-4 w-4 text-primary" }),
+        " Edit item"
+      ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(Package, { className: "h-4 w-4 text-primary" }),
         " Add custom item"
-      ] }),
-      /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-1 md:grid-cols-6 gap-3", children: [
-        /* @__PURE__ */ jsxs("div", { className: "md:col-span-3", children: [
-          /* @__PURE__ */ jsx(Label, { className: "text-xs uppercase text-muted-foreground", children: "Name" }),
-          /* @__PURE__ */ jsx(
+      ] }) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-6 gap-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "md:col-span-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs uppercase text-muted-foreground", children: "Name" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
             Input,
             {
               value: form.name,
@@ -2355,9 +2817,9 @@ function InventoryTab({ c }) {
             }
           )
         ] }),
-        /* @__PURE__ */ jsxs("div", { className: "md:col-span-2", children: [
-          /* @__PURE__ */ jsx(Label, { className: "text-xs uppercase text-muted-foreground", children: "Category" }),
-          /* @__PURE__ */ jsx(
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "md:col-span-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs uppercase text-muted-foreground", children: "Category" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
             Input,
             {
               value: form.category,
@@ -2366,9 +2828,9 @@ function InventoryTab({ c }) {
             }
           )
         ] }),
-        /* @__PURE__ */ jsxs("div", { children: [
-          /* @__PURE__ */ jsx(Label, { className: "text-xs uppercase text-muted-foreground", children: "Qty" }),
-          /* @__PURE__ */ jsx(
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs uppercase text-muted-foreground", children: "Qty" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
             Input,
             {
               type: "number",
@@ -2378,9 +2840,9 @@ function InventoryTab({ c }) {
             }
           )
         ] }),
-        /* @__PURE__ */ jsxs("div", { className: "md:col-span-3", children: [
-          /* @__PURE__ */ jsx(Label, { className: "text-xs uppercase text-muted-foreground", children: "Weight" }),
-          /* @__PURE__ */ jsx(
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "md:col-span-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs uppercase text-muted-foreground", children: "Weight" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
             Input,
             {
               value: form.weight,
@@ -2389,9 +2851,9 @@ function InventoryTab({ c }) {
             }
           )
         ] }),
-        /* @__PURE__ */ jsxs("div", { className: "md:col-span-3", children: [
-          /* @__PURE__ */ jsx(Label, { className: "text-xs uppercase text-muted-foreground", children: "Cost" }),
-          /* @__PURE__ */ jsx(
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "md:col-span-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs uppercase text-muted-foreground", children: "Cost" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
             Input,
             {
               value: form.cost,
@@ -2400,9 +2862,206 @@ function InventoryTab({ c }) {
             }
           )
         ] }),
-        /* @__PURE__ */ jsxs("div", { className: "md:col-span-6", children: [
-          /* @__PURE__ */ jsx(Label, { className: "text-xs uppercase text-muted-foreground", children: "Description" }),
-          /* @__PURE__ */ jsx(
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "md:col-span-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs uppercase text-muted-foreground", children: "Type (slot)" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "select",
+            {
+              value: form.slot,
+              onChange: (e) => {
+                const slot = e.target.value;
+                const noArmor = ["Ring", "Cloak", "Weapon", "Shield"].includes(
+                  slot
+                );
+                setForm({
+                  ...form,
+                  slot,
+                  ...noArmor ? { armorWeight: "", strengthReq: "" } : {},
+                  ...slot !== "Shield" ? { shieldType: "", shieldAc: "" } : {}
+                });
+                if (slot !== "Weapon") setWeapon(blankWeapon);
+              },
+              className: SELECT_CLASS,
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "None (not equippable)" }),
+                SLOT_KINDS.map((k) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: k, children: k }, k))
+              ]
+            }
+          )
+        ] }),
+        showArmorFields && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "md:col-span-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs uppercase text-muted-foreground", children: "Armor type" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "select",
+              {
+                value: form.armorWeight,
+                onChange: (e) => setForm({
+                  ...form,
+                  armorWeight: e.target.value
+                }),
+                className: SELECT_CLASS,
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "None (not armor)" }),
+                  ARMOR_WEIGHTS.map((w) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: w, children: w }, w))
+                ]
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "md:col-span-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs uppercase text-muted-foreground", children: "Strength req." }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              Input,
+              {
+                type: "number",
+                min: 0,
+                value: form.strengthReq,
+                onChange: (e) => setForm({ ...form, strengthReq: e.target.value }),
+                placeholder: "—"
+              }
+            )
+          ] })
+        ] }),
+        isShield && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "md:col-span-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs uppercase text-muted-foreground", children: "Shield type" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "select",
+              {
+                value: form.shieldType,
+                onChange: (e) => setForm({ ...form, shieldType: e.target.value }),
+                className: SELECT_CLASS,
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "— Select —" }),
+                  SHIELD_TYPES.map((t) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: t, children: t }, t))
+                ]
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "md:col-span-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs uppercase text-muted-foreground", children: "AC bonus" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              Input,
+              {
+                type: "number",
+                value: form.shieldAc,
+                onChange: (e) => setForm({ ...form, shieldAc: e.target.value }),
+                placeholder: "+2"
+              }
+            )
+          ] })
+        ] }),
+        isWeapon && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "md:col-span-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs uppercase text-muted-foreground", children: "Weapon category" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "select",
+              {
+                value: weapon.category,
+                onChange: (e) => setWeapon({ ...weapon, category: e.target.value }),
+                className: SELECT_CLASS,
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "— Select —" }),
+                  WEAPON_CATEGORIES.map((k) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: k, children: k }, k))
+                ]
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "md:col-span-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs uppercase text-muted-foreground", children: "Weapon type" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "select",
+              {
+                value: weapon.type,
+                onChange: (e) => setWeapon({ ...weapon, type: e.target.value }),
+                className: SELECT_CLASS,
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "— Select —" }),
+                  WEAPON_TYPES.map((t) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: t, children: t }, t)),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Custom", children: "Custom…" })
+                ]
+              }
+            )
+          ] }),
+          weapon.type === "Custom" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "md:col-span-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs uppercase text-muted-foreground", children: "Custom type" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              Input,
+              {
+                value: weapon.customType,
+                onChange: (e) => setWeapon({ ...weapon, customType: e.target.value }),
+                placeholder: "Spiked chain…"
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "md:col-span-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs uppercase text-muted-foreground", children: "Damage" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              Input,
+              {
+                value: weapon.damage,
+                onChange: (e) => setWeapon({ ...weapon, damage: e.target.value }),
+                placeholder: "1d8"
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "md:col-span-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs uppercase text-muted-foreground", children: "Damage type" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "select",
+              {
+                value: weapon.damageType,
+                onChange: (e) => setWeapon({ ...weapon, damageType: e.target.value }),
+                className: SELECT_CLASS,
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "—" }),
+                  DAMAGE_TYPES.map((t) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: t, children: t }, t))
+                ]
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "md:col-span-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs uppercase text-muted-foreground", children: "Range" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              Input,
+              {
+                value: weapon.range,
+                onChange: (e) => setWeapon({ ...weapon, range: e.target.value }),
+                placeholder: "5 ft or 80/320"
+              }
+            )
+          ] }),
+          weapon.properties.includes("Versatile") && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "md:col-span-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs uppercase text-muted-foreground", children: "Versatile dmg" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              Input,
+              {
+                value: weapon.versatileDamage,
+                onChange: (e) => setWeapon({ ...weapon, versatileDamage: e.target.value }),
+                placeholder: "1d10"
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "md:col-span-6", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs uppercase text-muted-foreground", children: "Properties" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap gap-1.5 mt-1.5", children: WEAPON_PROPERTIES.map((p) => {
+              const on = weapon.properties.includes(p);
+              return /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  type: "button",
+                  onClick: () => toggleProp(p),
+                  className: `text-xs px-2.5 py-1 rounded-full border transition-colors ${on ? "border-primary bg-primary/15 text-primary" : "border-border text-muted-foreground hover:border-primary/50"}`,
+                  children: p
+                },
+                p
+              );
+            }) })
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "md:col-span-6", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs uppercase text-muted-foreground", children: "Description" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
             Textarea,
             {
               rows: 2,
@@ -2411,7 +3070,7 @@ function InventoryTab({ c }) {
             }
           )
         ] }),
-        /* @__PURE__ */ jsx("div", { className: "md:col-span-6", children: /* @__PURE__ */ jsx(
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-6", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
           ModifierEditor,
           {
             mods,
@@ -2420,39 +3079,49 @@ function InventoryTab({ c }) {
           }
         ) })
       ] }),
-      /* @__PURE__ */ jsxs(Button, { onClick: submit, className: "mt-4", children: [
-        /* @__PURE__ */ jsx(Plus, { className: "h-4 w-4 mr-1.5" }),
-        " Add item"
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 flex gap-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(Button, { onClick: submit, children: editingId ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Save, { className: "h-4 w-4 mr-1.5" }),
+          " Save changes"
+        ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Plus, { className: "h-4 w-4 mr-1.5" }),
+          " Add item"
+        ] }) }),
+        editingId && /* @__PURE__ */ jsxRuntimeExports.jsxs(Button, { variant: "outline", onClick: cancelEdit, children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(X, { className: "h-4 w-4 mr-1.5" }),
+          " Cancel"
+        ] })
       ] })
     ] }),
-    inventory.length === 0 ? /* @__PURE__ */ jsx("div", { className: "grimoire-card p-12 text-center text-muted-foreground italic", children: "The pack is empty. Add gear from the 5e list or scribe your own above." }) : /* @__PURE__ */ jsxs(Fragment, { children: [
-      /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-4 text-sm text-muted-foreground px-1", children: [
-        /* @__PURE__ */ jsxs("span", { className: "flex items-center gap-1.5", children: [
-          /* @__PURE__ */ jsx(Backpack, { className: "h-4 w-4" }),
+    inventory.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grimoire-card p-12 text-center text-muted-foreground italic", children: "The pack is empty. Add gear from the 5e list or scribe your own above." }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-4 text-sm text-muted-foreground px-1", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center gap-1.5", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Backpack, { className: "h-4 w-4" }),
           " ",
           inventory.length,
           " item",
           inventory.length === 1 ? "" : "s"
         ] }),
-        weight > 0 && /* @__PURE__ */ jsxs("span", { children: [
+        weight > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
           "Carried weight:",
           " ",
-          /* @__PURE__ */ jsxs("span", { className: "text-foreground", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-foreground", children: [
             Number.isInteger(weight) ? weight : weight.toFixed(1),
             " lb."
           ] })
         ] })
       ] }),
-      categories.map((cat) => /* @__PURE__ */ jsxs("section", { className: "grimoire-card p-5", children: [
-        /* @__PURE__ */ jsx("h4", { className: "font-display text-sm uppercase tracking-widest text-primary mb-3", children: cat }),
-        /* @__PURE__ */ jsx("div", { className: "space-y-3", children: grouped[cat].map((it) => /* @__PURE__ */ jsx(
+      categories.map((cat) => /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "grimoire-card p-5", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "font-display text-sm uppercase tracking-widest text-primary mb-3", children: cat }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: grouped[cat].map((it) => /* @__PURE__ */ jsxRuntimeExports.jsx(
           ItemRow,
           {
             it,
+            equippedLabel: equippedSlotLabel(c, it.id),
             onQty: (delta) => updateItem(c.id, it.id, {
               quantity: Math.max(1, it.quantity + delta)
             }),
-            onEquip: () => updateItem(c.id, it.id, { equipped: !it.equipped }),
+            onEdit: () => startEdit(it),
             onRemove: () => removeItem(c.id, it.id)
           },
           it.id
@@ -2463,72 +3132,87 @@ function InventoryTab({ c }) {
 }
 function ItemRow({
   it,
+  equippedLabel,
   onQty,
-  onEquip,
+  onEdit,
   onRemove
 }) {
-  return /* @__PURE__ */ jsxs("div", { className: "border border-border rounded-md p-3 bg-background/40", children: [
-    /* @__PURE__ */ jsxs("div", { className: "flex items-start justify-between gap-2", children: [
-      /* @__PURE__ */ jsxs("div", { className: "min-w-0", children: [
-        /* @__PURE__ */ jsxs("div", { className: "font-display flex items-center gap-2 flex-wrap", children: [
+  const equipped = !!equippedLabel;
+  const wSummary = weaponSummary(it.weapon);
+  const meta = [
+    it.slot,
+    it.armorWeight && `${it.armorWeight} armor`,
+    it.shieldType && `${it.shieldType} shield`,
+    it.shieldAc != null ? `+${it.shieldAc} AC` : null,
+    it.strengthReq ? `Str ${it.strengthReq}` : null,
+    it.cost,
+    it.weight
+  ].filter(Boolean);
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border border-border rounded-md p-3 bg-background/40", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between gap-2", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "font-display flex items-center gap-2 flex-wrap", children: [
           it.name,
-          it.rarity && /* @__PURE__ */ jsx("span", { className: "text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded border border-primary/40 text-primary", children: it.rarity }),
-          it.equipped && /* @__PURE__ */ jsxs("span", { className: "text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded border border-primary/40 text-primary flex items-center gap-1", children: [
-            /* @__PURE__ */ jsx(ShieldCheck, { className: "h-3 w-3" }),
-            " Equipped"
+          it.rarity && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded border border-primary/40 text-primary", children: it.rarity }),
+          equipped && /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded border border-primary/40 text-primary flex items-center gap-1", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(ShieldCheck, { className: "h-3 w-3" }),
+            " ",
+            equippedLabel
           ] })
         ] }),
-        /* @__PURE__ */ jsx("div", { className: "text-[11px] text-muted-foreground", children: [it.cost, it.weight].filter(Boolean).join(" · ") })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[11px] text-muted-foreground", children: meta.join(" · ") })
       ] }),
-      /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-1.5 shrink-0", children: [
-        /* @__PURE__ */ jsxs("div", { className: "flex items-center border border-border rounded-md", children: [
-          /* @__PURE__ */ jsx(
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-1.5 shrink-0", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center border border-border rounded-md", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {
               onClick: () => onQty(-1),
               className: "px-1.5 py-1 text-muted-foreground hover:text-foreground disabled:opacity-40",
               disabled: it.quantity <= 1,
               "aria-label": "Decrease quantity",
-              children: /* @__PURE__ */ jsx(Minus, { className: "h-3.5 w-3.5" })
+              children: /* @__PURE__ */ jsxRuntimeExports.jsx(Minus, { className: "h-3.5 w-3.5" })
             }
           ),
-          /* @__PURE__ */ jsx("span", { className: "px-2 text-sm tabular-nums", children: it.quantity }),
-          /* @__PURE__ */ jsx(
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "px-2 text-sm tabular-nums", children: it.quantity }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {
               onClick: () => onQty(1),
               className: "px-1.5 py-1 text-muted-foreground hover:text-foreground",
               "aria-label": "Increase quantity",
-              children: /* @__PURE__ */ jsx(Plus, { className: "h-3.5 w-3.5" })
+              children: /* @__PURE__ */ jsxRuntimeExports.jsx(Plus, { className: "h-3.5 w-3.5" })
             }
           )
         ] }),
-        /* @__PURE__ */ jsx(
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
-            onClick: onEquip,
-            className: `text-[11px] px-2 py-1 rounded border transition-colors ${it.equipped ? "border-primary/50 text-primary" : "border-border text-muted-foreground hover:border-primary/50"}`,
-            children: it.equipped ? "Unequip" : "Equip"
+            onClick: onEdit,
+            className: "text-muted-foreground hover:text-primary",
+            "aria-label": "Edit item",
+            children: /* @__PURE__ */ jsxRuntimeExports.jsx(Pencil, { className: "h-4 w-4" })
           }
         ),
-        /* @__PURE__ */ jsx(
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
             onClick: onRemove,
             className: "text-muted-foreground hover:text-destructive",
             "aria-label": "Remove item",
-            children: /* @__PURE__ */ jsx(Trash2, { className: "h-4 w-4" })
+            children: /* @__PURE__ */ jsxRuntimeExports.jsx(Trash2, { className: "h-4 w-4" })
           }
         )
       ] })
     ] }),
-    it.description && /* @__PURE__ */ jsx("p", { className: "text-sm mt-2 text-muted-foreground whitespace-pre-wrap", children: it.description }),
-    it.modifiers && it.modifiers.length > 0 && /* @__PURE__ */ jsx(
+    wSummary && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[11px] text-muted-foreground mt-1.5", children: wSummary }),
+    it.description && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm mt-2 text-muted-foreground whitespace-pre-wrap", children: it.description }),
+    it.modifiers && it.modifiers.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx(
       "div",
       {
-        className: `flex flex-wrap gap-1.5 mt-2 ${it.equipped ? "" : "opacity-50"}`,
-        title: it.equipped ? "Active while equipped" : "Equip to apply these bonuses",
-        children: it.modifiers.map((m, i) => /* @__PURE__ */ jsx(
+        className: `flex flex-wrap gap-1.5 mt-2 ${equipped ? "" : "opacity-50"}`,
+        title: equipped ? "Active while equipped" : "Equip to apply these bonuses",
+        children: it.modifiers.map((m, i) => /* @__PURE__ */ jsxRuntimeExports.jsx(
           "span",
           {
             className: `text-[11px] font-mono px-2 py-0.5 rounded border ${m.delta >= 0 ? "border-primary/40 bg-primary/10 text-primary" : "border-destructive/40 bg-destructive/10 text-destructive"}`,
@@ -2540,9 +3224,9 @@ function ItemRow({
     )
   ] });
 }
-const Tabs = TabsPrimitive.Root;
-const TabsList = React.forwardRef(({ className, ...props }, ref) => /* @__PURE__ */ jsx(
-  TabsPrimitive.List,
+const Tabs = Root2;
+const TabsList = reactExports.forwardRef(({ className, ...props }, ref) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+  List,
   {
     ref,
     className: cn(
@@ -2552,9 +3236,9 @@ const TabsList = React.forwardRef(({ className, ...props }, ref) => /* @__PURE__
     ...props
   }
 ));
-TabsList.displayName = TabsPrimitive.List.displayName;
-const TabsTrigger = React.forwardRef(({ className, ...props }, ref) => /* @__PURE__ */ jsx(
-  TabsPrimitive.Trigger,
+TabsList.displayName = List.displayName;
+const TabsTrigger = reactExports.forwardRef(({ className, ...props }, ref) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+  Trigger,
   {
     ref,
     className: cn(
@@ -2564,9 +3248,9 @@ const TabsTrigger = React.forwardRef(({ className, ...props }, ref) => /* @__PUR
     ...props
   }
 ));
-TabsTrigger.displayName = TabsPrimitive.Trigger.displayName;
-const TabsContent = React.forwardRef(({ className, ...props }, ref) => /* @__PURE__ */ jsx(
-  TabsPrimitive.Content,
+TabsTrigger.displayName = Trigger.displayName;
+const TabsContent = reactExports.forwardRef(({ className, ...props }, ref) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+  Content,
   {
     ref,
     className: cn(
@@ -2576,18 +3260,18 @@ const TabsContent = React.forwardRef(({ className, ...props }, ref) => /* @__PUR
     ...props
   }
 ));
-TabsContent.displayName = TabsPrimitive.Content.displayName;
+TabsContent.displayName = Content.displayName;
 function CharacterManager() {
   const c = useActiveCharacter();
   const addCharacter = useStore((s) => s.addCharacter);
-  const [tab, setTab] = useState("overview");
-  return /* @__PURE__ */ jsxs("div", { className: "flex min-h-screen w-full", children: [
-    /* @__PURE__ */ jsx(CharacterSidebar, {}),
-    /* @__PURE__ */ jsx("main", { className: "flex-1 min-w-0", children: !c ? /* @__PURE__ */ jsx(EmptyState, { onCreate: () => addCharacter("New Adventurer") }) : /* @__PURE__ */ jsxs("div", { className: "p-6 md:p-10 max-w-6xl mx-auto", children: [
-      /* @__PURE__ */ jsxs("header", { className: "mb-6", children: [
-        /* @__PURE__ */ jsx("div", { className: "text-xs uppercase tracking-[0.3em] text-muted-foreground mb-1", children: "Adventurer's Codex" }),
-        /* @__PURE__ */ jsx("h2", { className: "font-display text-4xl text-gradient-ember", children: c.name || "Unnamed" }),
-        /* @__PURE__ */ jsxs("p", { className: "text-sm text-muted-foreground mt-1", children: [
+  const [tab, setTab] = reactExports.useState("overview");
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex min-h-screen w-full", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx(CharacterSidebar, {}),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("main", { className: "flex-1 min-w-0", children: !c ? /* @__PURE__ */ jsxRuntimeExports.jsx(EmptyState, { onCreate: () => addCharacter("New Adventurer") }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-6 md:p-10 max-w-6xl mx-auto", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("header", { className: "mb-6", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs uppercase tracking-[0.3em] text-muted-foreground mb-1", children: "Adventurer's Codex" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "font-display text-4xl text-gradient-ember", children: c.name || "Unnamed" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-sm text-muted-foreground mt-1", children: [
           "Level ",
           c.level,
           " · ",
@@ -2597,50 +3281,50 @@ function CharacterManager() {
           c.classSummary || "No class"
         ] })
       ] }),
-      /* @__PURE__ */ jsxs(Tabs, { value: tab, onValueChange: setTab, children: [
-        /* @__PURE__ */ jsxs(TabsList, { className: "bg-card/60 border border-border p-1 mb-6 h-auto flex-wrap", children: [
-          /* @__PURE__ */ jsxs(TabsTrigger, { value: "overview", children: [
-            /* @__PURE__ */ jsx(ScrollText, { className: "h-4 w-4 mr-1.5" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs(Tabs, { value: tab, onValueChange: setTab, children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(TabsList, { className: "bg-card/60 border border-border p-1 mb-6 h-auto flex-wrap", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(TabsTrigger, { value: "overview", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(ScrollText, { className: "h-4 w-4 mr-1.5" }),
             " Sheet"
           ] }),
-          /* @__PURE__ */ jsxs(TabsTrigger, { value: "effects", children: [
-            /* @__PURE__ */ jsx(Flame, { className: "h-4 w-4 mr-1.5" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(TabsTrigger, { value: "effects", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Flame, { className: "h-4 w-4 mr-1.5" }),
             " Buffs & Debuffs"
           ] }),
-          /* @__PURE__ */ jsxs(TabsTrigger, { value: "spells", children: [
-            /* @__PURE__ */ jsx(Sparkles, { className: "h-4 w-4 mr-1.5" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(TabsTrigger, { value: "spells", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Sparkles, { className: "h-4 w-4 mr-1.5" }),
             " Spells"
           ] }),
-          /* @__PURE__ */ jsxs(TabsTrigger, { value: "inventory", children: [
-            /* @__PURE__ */ jsx(Backpack, { className: "h-4 w-4 mr-1.5" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(TabsTrigger, { value: "inventory", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Backpack, { className: "h-4 w-4 mr-1.5" }),
             " Inventory"
           ] }),
-          /* @__PURE__ */ jsxs(TabsTrigger, { value: "abilities", children: [
-            /* @__PURE__ */ jsx(Zap, { className: "h-4 w-4 mr-1.5" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(TabsTrigger, { value: "abilities", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Zap, { className: "h-4 w-4 mr-1.5" }),
             " Abilities"
           ] }),
-          /* @__PURE__ */ jsxs(TabsTrigger, { value: "classes", children: [
-            /* @__PURE__ */ jsx(Crown, { className: "h-4 w-4 mr-1.5" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(TabsTrigger, { value: "classes", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Crown, { className: "h-4 w-4 mr-1.5" }),
             " Classes & Leveling"
           ] })
         ] }),
-        /* @__PURE__ */ jsx(TabsContent, { value: "overview", children: /* @__PURE__ */ jsx(OverviewTab, { c }) }),
-        /* @__PURE__ */ jsx(TabsContent, { value: "effects", children: /* @__PURE__ */ jsx(EffectsTab, { c }) }),
-        /* @__PURE__ */ jsx(TabsContent, { value: "spells", children: /* @__PURE__ */ jsx(SpellsTab, { c }) }),
-        /* @__PURE__ */ jsx(TabsContent, { value: "inventory", children: /* @__PURE__ */ jsx(InventoryTab, { c }) }),
-        /* @__PURE__ */ jsx(TabsContent, { value: "abilities", children: /* @__PURE__ */ jsx(AbilitiesTab, { c }) }),
-        /* @__PURE__ */ jsx(TabsContent, { value: "classes", children: /* @__PURE__ */ jsx(ClassesTab, { c }) })
+        /* @__PURE__ */ jsxRuntimeExports.jsx(TabsContent, { value: "overview", children: /* @__PURE__ */ jsxRuntimeExports.jsx(OverviewTab, { c }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(TabsContent, { value: "effects", children: /* @__PURE__ */ jsxRuntimeExports.jsx(EffectsTab, { c }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(TabsContent, { value: "spells", children: /* @__PURE__ */ jsxRuntimeExports.jsx(SpellsTab, { c }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(TabsContent, { value: "inventory", children: /* @__PURE__ */ jsxRuntimeExports.jsx(InventoryTab, { c }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(TabsContent, { value: "abilities", children: /* @__PURE__ */ jsxRuntimeExports.jsx(AbilitiesTab, { c }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(TabsContent, { value: "classes", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ClassesTab, { c }) })
       ] })
     ] }) })
   ] });
 }
 function EmptyState({ onCreate }) {
-  return /* @__PURE__ */ jsx("div", { className: "h-screen flex items-center justify-center p-10", children: /* @__PURE__ */ jsxs("div", { className: "text-center max-w-md", children: [
-    /* @__PURE__ */ jsx("div", { className: "font-display text-6xl text-gradient-ember mb-4", children: "⚔" }),
-    /* @__PURE__ */ jsx("h2", { className: "font-display text-3xl mb-3", children: "The codex awaits" }),
-    /* @__PURE__ */ jsx("p", { className: "text-muted-foreground mb-6", children: "Forge your first adventurer to begin. Each hero keeps their own homebrew spells, abilities, classes, and afflictions." }),
-    /* @__PURE__ */ jsxs(Button, { size: "lg", onClick: onCreate, children: [
-      /* @__PURE__ */ jsx(Plus, { className: "h-4 w-4 mr-2" }),
+  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-screen flex items-center justify-center p-10", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center max-w-md", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-display text-6xl text-gradient-ember mb-4", children: "⚔" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "font-display text-3xl mb-3", children: "The codex awaits" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-muted-foreground mb-6", children: "Forge your first adventurer to begin. Each hero keeps their own homebrew spells, abilities, classes, and afflictions." }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs(Button, { size: "lg", onClick: onCreate, children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(Plus, { className: "h-4 w-4 mr-2" }),
       " Forge first hero"
     ] })
   ] }) });

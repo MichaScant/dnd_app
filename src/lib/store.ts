@@ -33,11 +33,14 @@ interface State {
   removeSavedEffect: (sid: string) => void;
   addSpell: (id: string, s: Omit<HomebrewSpell, "id">) => void;
   removeSpell: (id: string, sid: string) => void;
+  updateSpell: (id: string, sid: string, patch: Partial<HomebrewSpell>) => void;
   addAbility: (id: string, a: Omit<HomebrewAbility, "id">) => void;
   removeAbility: (id: string, aid: string) => void;
   addItem: (id: string, item: Omit<InventoryItem, "id">) => boolean;
   removeItem: (id: string, iid: string) => void;
   updateItem: (id: string, iid: string, patch: Partial<InventoryItem>) => void;
+  equipItem: (id: string, slotId: string, itemId: string) => void;
+  unequipSlot: (id: string, slotId: string) => void;
   addClass: (id: string, c: Omit<HomebrewClass, "id">) => void;
   removeClass: (id: string, cid: string) => void;
   setLevelTable: (id: string, table: LevelEntry[]) => void;
@@ -172,6 +175,15 @@ export const useStore = create<State>()(
             spells: c.spells.filter((x) => x.id !== sid),
           })),
         })),
+      updateSpell: (id, sid, patch) =>
+        set((st) => ({
+          characters: patchChar(st.characters, id, (c) => ({
+            ...c,
+            spells: c.spells.map((x) =>
+              x.id === sid ? { ...x, ...patch } : x,
+            ),
+          })),
+        })),
       addAbility: (id, a) =>
         set((s) => ({
           characters: patchChar(s.characters, id, (c) => ({
@@ -206,10 +218,17 @@ export const useStore = create<State>()(
       },
       removeItem: (id, iid) =>
         set((s) => ({
-          characters: patchChar(s.characters, id, (c) => ({
-            ...c,
-            inventory: (c.inventory ?? []).filter((it) => it.id !== iid),
-          })),
+          characters: patchChar(s.characters, id, (c) => {
+            // Drop the item and clear it out of any slot it was equipped in.
+            const equipment = { ...(c.equipment ?? {}) };
+            for (const k of Object.keys(equipment))
+              if (equipment[k] === iid) delete equipment[k];
+            return {
+              ...c,
+              inventory: (c.inventory ?? []).filter((it) => it.id !== iid),
+              equipment,
+            };
+          }),
         })),
       updateItem: (id, iid, patch) =>
         set((s) => ({
@@ -219,6 +238,25 @@ export const useStore = create<State>()(
               it.id === iid ? { ...it, ...patch } : it,
             ),
           })),
+        })),
+      equipItem: (id, slotId, itemId) =>
+        set((s) => ({
+          characters: patchChar(s.characters, id, (c) => {
+            const equipment = { ...(c.equipment ?? {}) };
+            // An item lives in one slot at a time — free it from any other slot.
+            for (const k of Object.keys(equipment))
+              if (equipment[k] === itemId) delete equipment[k];
+            equipment[slotId] = itemId;
+            return { ...c, equipment };
+          }),
+        })),
+      unequipSlot: (id, slotId) =>
+        set((s) => ({
+          characters: patchChar(s.characters, id, (c) => {
+            const equipment = { ...(c.equipment ?? {}) };
+            delete equipment[slotId];
+            return { ...c, equipment };
+          }),
         })),
       addClass: (id, cl) =>
         set((s) => ({
@@ -256,17 +294,37 @@ export const useActiveCharacter = () => {
 export const concentrationCount = (effects: Effect[]): number =>
   effects.filter((e) => e.concentration).length;
 
+/** Item ids currently assigned to an equipment slot. */
+export const equippedItemIds = (c: Character): Set<string> =>
+  new Set(Object.values(c.equipment ?? {}));
+
+/** Inventory items currently equipped (in any slot). */
+export const equippedItems = (c: Character): InventoryItem[] => {
+  const ids = equippedItemIds(c);
+  return (c.inventory ?? []).filter((it) => ids.has(it.id));
+};
+
 /** Equipped inventory items that carry modifiers, expressed as effect sources. */
-export const equippedGearEffects = (c: Character): Effect[] =>
-  (c.inventory ?? [])
-    .filter((it) => it.equipped && it.modifiers && it.modifiers.length > 0)
-    .map((it) => ({
+export const equippedGearEffects = (c: Character): Effect[] => {
+  const ids = equippedItemIds(c);
+  const out: Effect[] = [];
+  for (const it of c.inventory ?? []) {
+    if (!ids.has(it.id)) continue;
+    const modifiers = [...(it.modifiers ?? [])];
+    // A shield's AC bonus applies while equipped, like an AC modifier.
+    if (it.slot === "Shield" && it.shieldAc)
+      modifiers.push({ target: "ac", delta: it.shieldAc });
+    if (modifiers.length === 0) continue;
+    out.push({
       id: it.id,
       name: it.name,
       kind: "buff" as const,
       description: it.description,
-      modifiers: it.modifiers ?? [],
-    }));
+      modifiers,
+    });
+  }
+  return out;
+};
 
 /**
  * Every active modifier source for stat/AC/save/skill math: buffs & debuffs
