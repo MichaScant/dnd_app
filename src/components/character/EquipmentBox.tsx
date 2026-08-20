@@ -8,32 +8,12 @@ import {
   ringSlotId,
   weaponSummary,
 } from "@/lib/equipment";
-import { modifierLabel } from "@/lib/modifiers";
+import { ModifierChips } from "@/components/character/ModifierChips";
 import { Label } from "@/components/ui/label";
 import { Shirt, TriangleAlert, Plus, Check } from "lucide-react";
 
 const SELECT_CLASS =
   "w-full bg-input border border-border rounded-md px-3 py-2 text-sm";
-
-function ModChips({ item }: { item: InventoryItem }) {
-  if (!item.modifiers || item.modifiers.length === 0) return null;
-  return (
-    <div className="flex flex-wrap gap-1.5 mt-2">
-      {item.modifiers.map((m, i) => (
-        <span
-          key={i}
-          className={`text-[11px] font-mono px-2 py-0.5 rounded border ${
-            m.delta >= 0
-              ? "border-primary/40 bg-primary/10 text-primary"
-              : "border-destructive/40 bg-destructive/10 text-destructive"
-          }`}
-        >
-          {modifierLabel(m)}
-        </span>
-      ))}
-    </div>
-  );
-}
 
 function StrWarning({ item, str }: { item: InventoryItem; str: number }) {
   if (item.strengthReq == null || str >= item.strengthReq) return null;
@@ -119,7 +99,7 @@ export function EquipmentBox({ c }: { c: Character }) {
                   +{item.shieldAc} AC
                 </p>
               )}
-              {item && <ModChips item={item} />}
+              {item && <ModifierChips modifiers={item.modifiers} />}
               {item && <StrWarning item={item} str={str} />}
             </div>
           );
@@ -169,7 +149,7 @@ export function EquipmentBox({ c }: { c: Character }) {
                       )}
                     </button>
                   </div>
-                  {on && <ModChips item={item} />}
+                  {on && <ModifierChips modifiers={item.modifiers} />}
                 </div>
               );
             })}

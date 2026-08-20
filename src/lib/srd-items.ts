@@ -1,5 +1,5 @@
 import { InventoryItem, SlotKind } from "@/lib/types";
-import { SRD_ATTRIBUTION } from "@/lib/srd";
+import { SRD_ATTRIBUTION } from "@/lib/srd-license";
 import rawItems from "@/data/srd-items.json";
 
 export { SRD_ATTRIBUTION };

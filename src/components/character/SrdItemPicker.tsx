@@ -11,7 +11,7 @@ import {
   itemsFor,
   groupItems,
   toInventoryItem,
-} from "@/lib/srdItems";
+} from "@/lib/srd-items";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {

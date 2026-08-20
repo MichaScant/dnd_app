@@ -8,7 +8,8 @@ import { Plus, Skull, Swords, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function CharacterSidebar() {
-  const { characters, activeId, setActive, addCharacter, removeCharacter } = useStore();
+  const { characters, activeId, setActive, addCharacter, removeCharacter } =
+    useStore();
   const [newName, setNewName] = useState("");
 
   const create = () => {
@@ -62,8 +63,16 @@ export function CharacterSidebar() {
 }
 
 function CharacterRow({
-  c, active, onSelect, onRemove,
-}: { c: Character; active: boolean; onSelect: () => void; onRemove: () => void }) {
+  c,
+  active,
+  onSelect,
+  onRemove,
+}: {
+  c: Character;
+  active: boolean;
+  onSelect: () => void;
+  onRemove: () => void;
+}) {
   return (
     <div
       onClick={onSelect}
@@ -82,7 +91,10 @@ function CharacterRow({
           </div>
         </div>
         <button
-          onClick={(e) => { e.stopPropagation(); if (confirm(`Delete ${c.name}?`)) onRemove(); }}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (confirm(`Delete ${c.name}?`)) onRemove();
+          }}
           className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition"
           aria-label="Delete"
         >
@@ -90,7 +102,10 @@ function CharacterRow({
         </button>
       </div>
       <div className="mt-1.5 flex items-center gap-2 text-[10px] text-muted-foreground">
-        <span className="flex items-center gap-1"><Skull className="h-3 w-3" />{c.hp}/{c.maxHp}</span>
+        <span className="flex items-center gap-1">
+          <Skull className="h-3 w-3" />
+          {c.hp}/{c.maxHp}
+        </span>
         <span>AC {c.ac}</span>
       </div>
     </div>

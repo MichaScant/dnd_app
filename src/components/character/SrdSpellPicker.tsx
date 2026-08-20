@@ -9,7 +9,7 @@ import {
   spellsForClass,
   groupByLevel,
   toHomebrewSpell,
-} from "@/lib/srd";
+} from "@/lib/srd-spells";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {

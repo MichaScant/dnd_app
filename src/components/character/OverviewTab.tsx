@@ -28,8 +28,8 @@ import { Heart, Shield, Footprints, Sparkles, Star, Zap } from "lucide-react";
 export function OverviewTab({ c }: { c: Character }) {
   const { update, setStat, toggleSave, cycleSkill } = useStore();
   // Buffs/debuffs + equipped gear all feed the stat, AC, save, and skill math.
-  const all = activeEffects(c);
-  const effective = effectiveStats(c.stats, all);
+  const allEffects = activeEffects(c);
+  const effective = effectiveStats(c.stats, allEffects);
   // Heavy armor whose Strength requirement isn't met costs 10 ft of speed (5e).
   const speedPenalty = equippedItems(c).some(
     (it) =>
@@ -137,7 +137,7 @@ export function OverviewTab({ c }: { c: Character }) {
         </VitalCard>
         <VitalCard icon={<Shield className="h-4 w-4" />} label="Armor Class">
           {(() => {
-            const acBonus = sumEffectBonus(all, "ac");
+            const acBonus = sumEffectBonus(allEffects, "ac");
             return (
               <div className="relative">
                 <Input
@@ -185,7 +185,7 @@ export function OverviewTab({ c }: { c: Character }) {
           </div>
         </VitalCard>
         {(() => {
-          const extraActions = sumEffectBonus(all, "extraAction");
+          const extraActions = sumEffectBonus(allEffects, "extraAction");
           if (extraActions === 0) return null;
           return (
             <VitalCard icon={<Zap className="h-4 w-4" />} label="Actions">
@@ -252,7 +252,7 @@ export function OverviewTab({ c }: { c: Character }) {
               const mod =
                 modifier(effective[k]) +
                 (c.savingThrows[k] ? c.proficiencyBonus : 0) +
-                sumSaveBonus(all, k);
+                sumSaveBonus(allEffects, k);
               return (
                 <label
                   key={k}
@@ -286,7 +286,7 @@ export function OverviewTab({ c }: { c: Character }) {
               const bonus =
                 modifier(effective[ability]) +
                 pbMult * c.proficiencyBonus +
-                sumSkillBonus(all, s);
+                sumSkillBonus(allEffects, s);
               return (
                 <button
                   key={s}

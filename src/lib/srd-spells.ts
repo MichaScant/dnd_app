@@ -1,5 +1,8 @@
 import { HomebrewSpell } from "@/lib/types";
+import { SRD_ATTRIBUTION } from "@/lib/srd-license";
 import rawSpells from "@/data/srd-spells.json";
+
+export { SRD_ATTRIBUTION };
 
 /**
  * A spell from the D&D 5e System Reference Document (SRD 5.1).
@@ -18,10 +21,6 @@ export interface SrdSpell {
   classes: string[]; // class names that can cast it, e.g. ["Sorcerer", "Wizard"]
   description: string;
 }
-
-/** Attribution required by CC BY 4.0 — surface this wherever the data is shown. */
-export const SRD_ATTRIBUTION =
-  "Spell data from the System Reference Document 5.1, © Wizards of the Coast, licensed under CC BY 4.0.";
 
 export const SRD_SPELLS = rawSpells as unknown as SrdSpell[];
 
