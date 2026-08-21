@@ -74,7 +74,8 @@ export type SlotKind =
   | "Boots"
   | "Ring"
   | "Weapon"
-  | "Shield";
+  | "Shield"
+  | "Miscellaneous";
 
 export type ArmorWeight = "Light" | "Medium" | "Heavy";
 
@@ -104,6 +105,7 @@ export interface InventoryItem {
   weapon?: WeaponStats; // set when the item is a weapon
   shieldType?: string; // "Light" | "Heavy" — set when the item is a shield
   shieldAc?: number; // AC granted while the shield is equipped
+  consumable?: boolean; // potions, scrolls, ammo… — listed apart from the pack
   modifiers?: StatModifier[]; // applied to the character while equipped
 }
 

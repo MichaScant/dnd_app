@@ -232,12 +232,21 @@ export const useStore = create<State>()(
         })),
       updateItem: (id, iid, patch) =>
         set((s) => ({
-          characters: patchChar(s.characters, id, (c) => ({
-            ...c,
-            inventory: (c.inventory ?? []).map((it) =>
+          characters: patchChar(s.characters, id, (c) => {
+            const inventory = (c.inventory ?? []).map((it) =>
               it.id === iid ? { ...it, ...patch } : it,
-            ),
-          })),
+            );
+            // An item that's no longer equippable (no slot, or now a
+            // consumable) can't remain assigned to an equipment slot.
+            const updated = inventory.find((it) => it.id === iid);
+            let equipment = c.equipment ?? {};
+            if (updated && (!updated.slot || updated.consumable)) {
+              equipment = { ...equipment };
+              for (const k of Object.keys(equipment))
+                if (equipment[k] === iid) delete equipment[k];
+            }
+            return { ...c, inventory, equipment };
+          }),
         })),
       equipItem: (id, slotId, itemId) =>
         set((s) => ({

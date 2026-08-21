@@ -17,7 +17,28 @@ export const SLOT_KINDS: SlotKind[] = [
   "Ring",
   "Weapon",
   "Shield",
+  "Miscellaneous",
 ];
+
+/**
+ * Slots that are never armor: the armor-type and Strength-requirement fields
+ * are hidden for these when building an item.
+ */
+export const NON_ARMOR_SLOTS: SlotKind[] = [
+  "Ring",
+  "Cloak",
+  "Weapon",
+  "Shield",
+  "Miscellaneous",
+];
+
+/**
+ * Whether the armor-type / Strength-requirement fields apply to a slot.
+ * They do for armor-capable slots (and for "no slot", where the item may still
+ * be plain gear), but not for rings, cloaks, weapons, shields, or misc items.
+ */
+export const slotUsesArmorFields = (slot: SlotKind | ""): boolean =>
+  !(NON_ARMOR_SLOTS as readonly string[]).includes(slot);
 
 export const ARMOR_WEIGHTS: ArmorWeight[] = ["Light", "Medium", "Heavy"];
 
@@ -125,9 +146,15 @@ export const EQUIP_SLOTS: EquipSlot[] = [
   { id: "shield", label: "Shield", accepts: "Shield" },
 ];
 
-/** Equipment-map key prefix for a worn ring (one key per ring item). */
+/**
+ * Rings and miscellaneous items are multi-equip: a character can wear any
+ * number of them, so each gets its own equipment-map key built from a prefix
+ * plus the item id (rather than occupying one of the fixed slots above).
+ */
 export const RING_SLOT_PREFIX = "ring:";
+export const MISC_SLOT_PREFIX = "misc:";
 export const ringSlotId = (itemId: string): string => RING_SLOT_PREFIX + itemId;
+export const miscSlotId = (itemId: string): string => MISC_SLOT_PREFIX + itemId;
 
 /** The slot label an item currently occupies, if any (e.g. "Ring", "Head"). */
 export const equippedSlotLabel = (
@@ -138,6 +165,7 @@ export const equippedSlotLabel = (
   const key = Object.keys(equipment).find((k) => equipment[k] === itemId);
   if (!key) return undefined;
   if (key.startsWith(RING_SLOT_PREFIX)) return "Ring";
+  if (key.startsWith(MISC_SLOT_PREFIX)) return "Misc";
   return EQUIP_SLOTS.find((s) => s.id === key)?.label;
 };
 
@@ -150,3 +178,7 @@ export const itemsForSlot = (
 /** All ring items in the inventory (for the multi-equip Rings section). */
 export const ringItems = (inventory: InventoryItem[]): InventoryItem[] =>
   inventory.filter((it) => it.slot === "Ring");
+
+/** All miscellaneous items in the inventory (for the multi-equip section). */
+export const miscItems = (inventory: InventoryItem[]): InventoryItem[] =>
+  inventory.filter((it) => it.slot === "Miscellaneous");

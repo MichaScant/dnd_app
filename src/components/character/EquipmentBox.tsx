@@ -6,6 +6,8 @@ import {
   itemsForSlot,
   ringItems,
   ringSlotId,
+  miscItems,
+  miscSlotId,
   weaponSummary,
 } from "@/lib/equipment";
 import { ModifierChips } from "@/components/character/ModifierChips";
@@ -25,6 +27,76 @@ function StrWarning({ item, str }: { item: InventoryItem; str: number }) {
   );
 }
 
+/**
+ * A multi-equip group (Rings, Miscellaneous): every matching item is listed
+ * with a Wear/Worn toggle, so any number can be equipped at once.
+ */
+function MultiEquipSection({
+  title,
+  emptyHint,
+  items,
+  equippedIds,
+  onToggle,
+}: {
+  title: string;
+  emptyHint: string;
+  items: InventoryItem[];
+  equippedIds: Set<string>;
+  onToggle: (item: InventoryItem) => void;
+}) {
+  return (
+    <div className="mt-4">
+      <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">
+        {title}
+      </Label>
+      {items.length === 0 ? (
+        <p className="text-[11px] text-muted-foreground italic mt-1.5">
+          {emptyHint}
+        </p>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-1.5">
+          {items.map((item) => {
+            const on = equippedIds.has(item.id);
+            return (
+              <div
+                key={item.id}
+                className={`rounded-md border p-2.5 ${
+                  on
+                    ? "border-primary/50 bg-primary/5"
+                    : "border-border bg-background/40"
+                }`}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-display truncate">{item.name}</span>
+                  <button
+                    onClick={() => onToggle(item)}
+                    className={`text-[11px] px-2 py-1 rounded border transition-colors flex items-center gap-1 shrink-0 ${
+                      on
+                        ? "border-primary/50 text-primary"
+                        : "border-border text-muted-foreground hover:border-primary/50"
+                    }`}
+                  >
+                    {on ? (
+                      <>
+                        <Check className="h-3 w-3" /> Worn
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="h-3 w-3" /> Wear
+                      </>
+                    )}
+                  </button>
+                </div>
+                {on && <ModifierChips modifiers={item.modifiers} />}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function EquipmentBox({ c }: { c: Character }) {
   const { equipItem, unequipSlot } = useStore();
   const inventory = c.inventory ?? [];
@@ -32,10 +104,16 @@ export function EquipmentBox({ c }: { c: Character }) {
   const equippedIds = equippedItemIds(c);
   const str = c.stats.str;
   const rings = ringItems(inventory);
+  const misc = miscItems(inventory);
 
   const toggleRing = (item: InventoryItem) => {
     if (equippedIds.has(item.id)) unequipSlot(c.id, ringSlotId(item.id));
     else equipItem(c.id, ringSlotId(item.id), item.id);
+  };
+
+  const toggleMisc = (item: InventoryItem) => {
+    if (equippedIds.has(item.id)) unequipSlot(c.id, miscSlotId(item.id));
+    else equipItem(c.id, miscSlotId(item.id), item.id);
   };
 
   return (
@@ -106,56 +184,21 @@ export function EquipmentBox({ c }: { c: Character }) {
         })}
       </div>
 
-      {/* Rings — wear as many as you like */}
-      <div className="mt-4">
-        <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">
-          Rings
-        </Label>
-        {rings.length === 0 ? (
-          <p className="text-[11px] text-muted-foreground italic mt-1.5">
-            No ring items yet. Create one in the Inventory tab with type “Ring”.
-          </p>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-1.5">
-            {rings.map((item) => {
-              const on = equippedIds.has(item.id);
-              return (
-                <div
-                  key={item.id}
-                  className={`rounded-md border p-2.5 ${
-                    on
-                      ? "border-primary/50 bg-primary/5"
-                      : "border-border bg-background/40"
-                  }`}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-display truncate">{item.name}</span>
-                    <button
-                      onClick={() => toggleRing(item)}
-                      className={`text-[11px] px-2 py-1 rounded border transition-colors flex items-center gap-1 shrink-0 ${
-                        on
-                          ? "border-primary/50 text-primary"
-                          : "border-border text-muted-foreground hover:border-primary/50"
-                      }`}
-                    >
-                      {on ? (
-                        <>
-                          <Check className="h-3 w-3" /> Worn
-                        </>
-                      ) : (
-                        <>
-                          <Plus className="h-3 w-3" /> Wear
-                        </>
-                      )}
-                    </button>
-                  </div>
-                  {on && <ModifierChips modifiers={item.modifiers} />}
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
+      {/* Rings & Miscellaneous — wear as many as you like */}
+      <MultiEquipSection
+        title="Rings"
+        emptyHint="No ring items yet. Create one in the Inventory tab with type “Ring”."
+        items={rings}
+        equippedIds={equippedIds}
+        onToggle={toggleRing}
+      />
+      <MultiEquipSection
+        title="Miscellaneous"
+        emptyHint="No miscellaneous items yet. Create one in the Inventory tab with type “Miscellaneous”."
+        items={misc}
+        equippedIds={equippedIds}
+        onToggle={toggleMisc}
+      />
     </section>
   );
 }

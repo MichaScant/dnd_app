@@ -16,6 +16,7 @@ import {
   WEAPON_TYPES,
   DAMAGE_TYPES,
   WEAPON_PROPERTIES,
+  slotUsesArmorFields,
 } from "@/lib/equipment";
 import { DraftMod, expandMods } from "@/lib/modifiers";
 import { ModifierEditor } from "@/components/character/ModifierEditor";
@@ -27,7 +28,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Package, Pencil, Save, X } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { Plus, Package, Pencil, Save, X, FlaskConical } from "lucide-react";
 
 // ---------------------------------------------------------------------------
 // Form state — mirrors InventoryItem, but numeric fields are kept as strings
@@ -46,6 +49,7 @@ interface ItemFormState {
   armorWeight: ArmorWeight | "";
   shieldType: string;
   shieldAc: string;
+  consumable: boolean;
 }
 
 interface WeaponFormState {
@@ -71,6 +75,7 @@ const blankItem: ItemFormState = {
   armorWeight: "",
   shieldType: "",
   shieldAc: "",
+  consumable: false,
 };
 
 const blankWeapon: WeaponFormState = {
@@ -96,6 +101,7 @@ const formFromItem = (it: InventoryItem): ItemFormState => ({
   armorWeight: (it.armorWeight ?? "") as ArmorWeight | "",
   shieldType: it.shieldType ?? "",
   shieldAc: it.shieldAc != null ? String(it.shieldAc) : "",
+  consumable: !!it.consumable,
 });
 
 const weaponFromItem = (it: InventoryItem): WeaponFormState => {
@@ -319,9 +325,7 @@ export function ItemForm({
   const isWeapon = form.slot === "Weapon";
   const isShield = form.slot === "Shield";
   // Armor type & Strength requirement only make sense for armor-capable slots.
-  const showArmorFields = !["Ring", "Cloak", "Weapon", "Shield"].includes(
-    form.slot,
-  );
+  const showArmorFields = slotUsesArmorFields(form.slot);
 
   const buildWeapon = (): WeaponStats | undefined => {
     const resolvedType =
@@ -344,6 +348,8 @@ export function ItemForm({
 
   const submit = () => {
     if (!form.name.trim()) return;
+    // A consumable is never equippable, so it carries no slot/armor/weapon data.
+    const equippable = !form.consumable;
     const base = {
       name: form.name.trim(),
       category: form.category.trim() || "Custom",
@@ -351,15 +357,20 @@ export function ItemForm({
       weight: form.weight.trim() || undefined,
       cost: form.cost.trim() || undefined,
       description: form.description.trim(),
-      slot: form.slot || undefined,
+      slot: equippable ? form.slot || undefined : undefined,
       strengthReq:
-        showArmorFields && form.strengthReq
+        equippable && showArmorFields && form.strengthReq
           ? Number(form.strengthReq)
           : undefined,
-      armorWeight: showArmorFields ? form.armorWeight || undefined : undefined,
-      weapon: isWeapon ? buildWeapon() : undefined,
-      shieldType: isShield ? form.shieldType || undefined : undefined,
-      shieldAc: isShield && form.shieldAc ? Number(form.shieldAc) : undefined,
+      armorWeight:
+        equippable && showArmorFields ? form.armorWeight || undefined : undefined,
+      weapon: equippable && isWeapon ? buildWeapon() : undefined,
+      shieldType: equippable && isShield ? form.shieldType || undefined : undefined,
+      shieldAc:
+        equippable && isShield && form.shieldAc
+          ? Number(form.shieldAc)
+          : undefined,
+      consumable: form.consumable || undefined,
       modifiers: mods.length ? expandMods(mods) : undefined,
     };
     if (editing) {
@@ -379,7 +390,7 @@ export function ItemForm({
   // Changing the slot resets fields that no longer apply.
   const changeSlot = (value: string) => {
     const slot = value as SlotKind | "";
-    const noArmor = ["Ring", "Cloak", "Weapon", "Shield"].includes(slot);
+    const noArmor = !slotUsesArmorFields(slot);
     setForm((f) => ({
       ...f,
       slot,
@@ -445,17 +456,38 @@ export function ItemForm({
           />
         </Field>
 
-        <SelectField
-          label="Type (slot)"
-          span={2}
-          value={form.slot}
-          placeholder="None (not equippable)"
-          options={SLOT_KINDS}
-          onChange={changeSlot}
-        />
-        {showArmorFields && <ArmorFields form={form} setForm={setForm} />}
-        {isShield && <ShieldFields form={form} setForm={setForm} />}
-        {isWeapon && <WeaponFields weapon={weapon} setWeapon={setWeapon} />}
+        <div className="md:col-span-6 flex items-center gap-2">
+          <Checkbox
+            id="item-consumable"
+            checked={form.consumable}
+            onCheckedChange={(v) =>
+              setForm((f) => ({ ...f, consumable: !!v }))
+            }
+          />
+          <Label
+            htmlFor="item-consumable"
+            className="text-sm cursor-pointer flex items-center gap-1.5"
+          >
+            <FlaskConical className="h-3.5 w-3.5 text-primary" /> Consumable
+            (potion, scroll, ammo…) — kept in its own list, not equippable
+          </Label>
+        </div>
+
+        {!form.consumable && (
+          <>
+            <SelectField
+              label="Type (slot)"
+              span={2}
+              value={form.slot}
+              placeholder="None (not equippable)"
+              options={SLOT_KINDS}
+              onChange={changeSlot}
+            />
+            {showArmorFields && <ArmorFields form={form} setForm={setForm} />}
+            {isShield && <ShieldFields form={form} setForm={setForm} />}
+            {isWeapon && <WeaponFields weapon={weapon} setWeapon={setWeapon} />}
+          </>
+        )}
 
         <Field label="Description" span={6}>
           <Textarea
@@ -466,13 +498,17 @@ export function ItemForm({
             }
           />
         </Field>
-        <div className="md:col-span-6">
-          <ModifierEditor
-            mods={mods}
-            onChange={setMods}
-            emptyHint="No stat bonuses. Add some if wearing/wielding this item should change ability scores, AC, DC, saves, attack rolls, damage, or skills — they apply while it's equipped."
-          />
-        </div>
+        {/* Modifiers apply only while equipped, so they don't apply to
+            consumables — hide the editor for them. */}
+        {!form.consumable && (
+          <div className="md:col-span-6">
+            <ModifierEditor
+              mods={mods}
+              onChange={setMods}
+              emptyHint="No stat bonuses. Add some if wearing/wielding this item should change ability scores, AC, DC, saves, attack rolls, damage, or skills — they apply while it's equipped."
+            />
+          </div>
+        )}
       </div>
 
       <div className="mt-4 flex gap-2">
