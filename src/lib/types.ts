@@ -64,10 +64,17 @@ export interface HomebrewAbility {
   description: string;
 }
 
-/** Spell slots for one tier: how many the character has and how many are spent. */
+/**
+ * One group of spell slots. A character can have several groups at the same
+ * spell level — e.g. separate Wizard and Bard pools — so each carries its own
+ * id, level, and (optional) caster class.
+ */
 export interface SpellSlotTier {
+  id: string;
+  level: number; // spell tier (1-9)
   total: number;
   used: number;
+  type?: string; // caster class the slots belong to, e.g. "Wizard" (optional)
 }
 
 /** Which equipment slot an item fits (undefined = not slot-equippable). */
@@ -203,7 +210,7 @@ export interface Character {
   concentrationMax: number; // max simultaneous concentration spells (default 1)
   classes: HomebrewClass[];
   spells: HomebrewSpell[];
-  spellSlots: Record<number, SpellSlotTier>; // spell level (1-9) -> slots
+  spellSlots: SpellSlotTier[]; // slot groups across tiers (see SpellSlotTier)
   abilities: HomebrewAbility[];
   inventory: InventoryItem[];
   equipment: Record<string, string>; // slot id -> equipped item id
@@ -248,7 +255,7 @@ export const createCharacter = (name = "New Adventurer"): Character => ({
   concentrationMax: 1,
   classes: [],
   spells: [],
-  spellSlots: {},
+  spellSlots: [],
   abilities: [],
   inventory: [],
   equipment: {},

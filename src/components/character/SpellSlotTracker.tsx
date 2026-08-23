@@ -1,5 +1,7 @@
+import { useState } from "react";
+import { SRD_CLASSES } from "@/lib/srd-spells";
 import { Input } from "@/components/ui/input";
-import { RotateCcw } from "lucide-react";
+import { RotateCcw, Trash2 } from "lucide-react";
 
 /** 1 → "1st", 2 → "2nd", 3 → "3rd", 4 → "4th", … */
 const ordinal = (n: number): string => {
@@ -8,33 +10,81 @@ const ordinal = (n: number): string => {
   return `${n}${suffixes[(v - 20) % 10] ?? suffixes[v] ?? suffixes[0]}`;
 };
 
+const CLASS_SELECT =
+  "h-7 bg-input border border-border rounded-md px-2 text-xs";
+
 /**
  * Spell-slot tracker for a single tier: shows the slot type, total, and how
  * many are used. Each slot is a pip — click to spend it, click again to
  * recover it. Total is editable; Reset frees all (e.g. after a long rest).
+ * An optional caster class labels which class the slots belong to.
  */
 export function SpellSlotTracker({
   level,
   total,
   used,
+  type,
   onChangeTotal,
   onChangeUsed,
+  onChangeType,
+  onRemove,
 }: {
   level: number;
   total: number;
   used: number;
+  type: string;
   onChangeTotal: (total: number) => void;
   onChangeUsed: (used: number) => void;
+  onChangeType: (type: string) => void;
+  onRemove: () => void;
 }) {
   const setUsedTo = (n: number) =>
     onChangeUsed(Math.max(0, Math.min(total, n)));
   const remaining = Math.max(0, total - used);
 
+  // "Custom" holds a homebrew class name that isn't one of the standard casters.
+  const [customMode, setCustomMode] = useState(
+    type !== "" && !SRD_CLASSES.includes(type),
+  );
+  const selectClass = (value: string) => {
+    if (value === "Custom") {
+      setCustomMode(true); // keep any existing custom text
+    } else {
+      setCustomMode(false);
+      onChangeType(value);
+    }
+  };
+
   return (
-    <div className="flex items-center flex-wrap gap-x-3 gap-y-2 mb-4 rounded-md border border-border bg-background/40 px-3 py-2">
-      <span className="text-[11px] uppercase tracking-wider text-muted-foreground">
-        {ordinal(level)}-level slots
-      </span>
+    <div className="flex items-center flex-wrap gap-x-3 gap-y-2 rounded-md border border-border bg-background/40 px-3 py-2">
+      <div className="flex items-center gap-1.5">
+        <select
+          className={CLASS_SELECT}
+          value={customMode ? "Custom" : type}
+          onChange={(e) => selectClass(e.target.value)}
+          aria-label={`${ordinal(level)}-level slot class`}
+        >
+          <option value="">— type —</option>
+          {SRD_CLASSES.map((name) => (
+            <option key={name} value={name}>
+              {name}
+            </option>
+          ))}
+          <option value="Custom">Custom…</option>
+        </select>
+        {customMode && (
+          <Input
+            value={type}
+            onChange={(e) => onChangeType(e.target.value)}
+            placeholder="Class"
+            className="h-7 w-24"
+            aria-label="Custom caster class"
+          />
+        )}
+        <span className="text-[11px] uppercase tracking-wider text-muted-foreground">
+          {ordinal(level)}-level slots
+        </span>
+      </div>
 
       {total > 0 ? (
         <>
@@ -91,6 +141,16 @@ export function SpellSlotTracker({
           <RotateCcw className="h-3 w-3" /> Reset
         </button>
       )}
+
+      <button
+        type="button"
+        onClick={onRemove}
+        className="text-muted-foreground hover:text-destructive"
+        aria-label="Remove this slot group"
+        title="Remove this slot group"
+      >
+        <Trash2 className="h-3.5 w-3.5" />
+      </button>
     </div>
   );
 }

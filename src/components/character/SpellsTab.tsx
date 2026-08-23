@@ -10,6 +10,7 @@ import {
   CastPrompt,
 } from "@/components/character/ConcentrationDialog";
 import { SrdSpellPicker } from "@/components/character/SrdSpellPicker";
+import { Plus } from "lucide-react";
 
 /** Bucket the spellbook by level (0 = cantrip), lowest first. */
 const byLevel = (spells: HomebrewSpell[]): [number, HomebrewSpell[]][] => {
@@ -24,11 +25,18 @@ const byLevel = (spells: HomebrewSpell[]): [number, HomebrewSpell[]][] => {
 const levelLabel = (lvl: number) => (lvl === 0 ? "Cantrips" : `Level ${lvl}`);
 
 export function SpellsTab({ c }: { c: Character }) {
-  const { removeSpell, addEffect, removeEffect, setSpellSlots } = useStore();
+  const {
+    removeSpell,
+    addEffect,
+    removeEffect,
+    addSpellSlotTier,
+    updateSpellSlotTier,
+    removeSpellSlotTier,
+  } = useStore();
   const [editing, setEditing] = useState<HomebrewSpell | null>(null);
   const [prompt, setPrompt] = useState<CastPrompt | null>(null);
 
-  const spellSlots = c.spellSlots ?? {};
+  const spellSlots = Array.isArray(c.spellSlots) ? c.spellSlots : [];
 
   const max = c.concentrationMax ?? 1;
   const activeConcentration = c.effects.filter((e) => e.concentration);
@@ -93,7 +101,12 @@ export function SpellsTab({ c }: { c: Character }) {
     setPrompt(null);
   };
 
-  const levels = byLevel(c.spells);
+  // Render a section per level that has spells OR slot groups, so slots stay
+  // visible and editable even for tiers you haven't added spells to yet.
+  const spellsByLevel = new Map(byLevel(c.spells));
+  const levels = [
+    ...new Set([...spellsByLevel.keys(), ...spellSlots.map((t) => t.level)]),
+  ].sort((a, b) => a - b);
 
   return (
     <div className="space-y-6">
@@ -116,34 +129,60 @@ export function SpellsTab({ c }: { c: Character }) {
           The spellbook is empty. Scribe your first incantation above.
         </div>
       ) : (
-        levels.map(([lvl, spells]) => (
-          <section key={lvl} className="grimoire-card p-5">
-            <h4 className="font-display text-sm uppercase tracking-widest text-primary mb-3">
-              {levelLabel(lvl)}
-            </h4>
-            {/* Cantrips (level 0) don't use spell slots. */}
-            {lvl > 0 && (
-              <SpellSlotTracker
-                level={lvl}
-                total={spellSlots[lvl]?.total ?? 0}
-                used={spellSlots[lvl]?.used ?? 0}
-                onChangeTotal={(n) => setSpellSlots(c.id, lvl, { total: n })}
-                onChangeUsed={(n) => setSpellSlots(c.id, lvl, { used: n })}
-              />
-            )}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {spells.map((s) => (
-                <SpellCard
-                  key={s.id}
-                  spell={s}
-                  onCast={() => cast(s)}
-                  onEdit={() => startEdit(s)}
-                  onRemove={() => removeSpell(c.id, s.id)}
-                />
-              ))}
-            </div>
-          </section>
-        ))
+        levels.map((lvl) => {
+          const spells = spellsByLevel.get(lvl) ?? [];
+          const tiers = spellSlots.filter((t) => t.level === lvl);
+          return (
+            <section key={lvl} className="grimoire-card p-5">
+              <h4 className="font-display text-sm uppercase tracking-widest text-primary mb-3">
+                {levelLabel(lvl)}
+              </h4>
+              {/* Spell slots — cantrips (level 0) don't use them. A tier can
+                  hold slots for a different caster class, so allow several. */}
+              {lvl > 0 && (
+                <div className="space-y-2 mb-4">
+                  {tiers.map((t) => (
+                    <SpellSlotTracker
+                      key={t.id}
+                      level={lvl}
+                      total={t.total}
+                      used={t.used}
+                      type={t.type ?? ""}
+                      onChangeTotal={(n) =>
+                        updateSpellSlotTier(c.id, t.id, { total: n })
+                      }
+                      onChangeUsed={(n) =>
+                        updateSpellSlotTier(c.id, t.id, { used: n })
+                      }
+                      onChangeType={(ty) =>
+                        updateSpellSlotTier(c.id, t.id, { type: ty })
+                      }
+                      onRemove={() => removeSpellSlotTier(c.id, t.id)}
+                    />
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => addSpellSlotTier(c.id, lvl)}
+                    className="text-[11px] flex items-center gap-1 text-muted-foreground hover:text-primary border border-dashed border-border rounded-md px-2 py-1"
+                  >
+                    <Plus className="h-3 w-3" /> Add slots
+                  </button>
+                </div>
+              )}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {spells.map((s) => (
+                  <SpellCard
+                    key={s.id}
+                    spell={s}
+                    onCast={() => cast(s)}
+                    onEdit={() => startEdit(s)}
+                    onRemove={() => removeSpell(c.id, s.id)}
+                  />
+                ))}
+              </div>
+            </section>
+          );
+        })
       )}
 
       <ConcentrationDialog

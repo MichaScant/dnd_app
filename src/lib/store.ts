@@ -35,11 +35,13 @@ interface State {
   addSpell: (id: string, s: Omit<HomebrewSpell, "id">) => void;
   removeSpell: (id: string, sid: string) => void;
   updateSpell: (id: string, sid: string, patch: Partial<HomebrewSpell>) => void;
-  setSpellSlots: (
+  addSpellSlotTier: (id: string, level: number) => void;
+  updateSpellSlotTier: (
     id: string,
-    level: number,
-    patch: Partial<SpellSlotTier>,
+    tierId: string,
+    patch: Partial<Pick<SpellSlotTier, "total" | "used" | "type">>,
   ) => void;
+  removeSpellSlotTier: (id: string, tierId: string) => void;
   addAbility: (id: string, a: Omit<HomebrewAbility, "id">) => void;
   removeAbility: (id: string, aid: string) => void;
   addItem: (id: string, item: Omit<InventoryItem, "id">) => boolean;
@@ -57,6 +59,36 @@ const patchChar = (
   id: string,
   fn: (c: Character) => Character,
 ) => chars.map((c) => (c.id === id ? fn(c) : c));
+
+/**
+ * Coerce persisted spell-slot data into the current array shape. Handles the
+ * earlier `Record<level, {total,used,type}>` form (one group per level) by
+ * turning each entry into a tier, and tolerates missing/garbage values.
+ */
+const normalizeSpellSlots = (raw: unknown): SpellSlotTier[] => {
+  if (Array.isArray(raw)) {
+    return (raw as Partial<SpellSlotTier>[]).map((t, i) => ({
+      id: t.id ?? `slot-${t.level ?? 0}-${i}`,
+      level: t.level ?? 0,
+      total: t.total ?? 0,
+      used: t.used ?? 0,
+      type: t.type,
+    }));
+  }
+  if (raw && typeof raw === "object") {
+    const entries = Object.entries(
+      raw as Record<string, { total?: number; used?: number; type?: string }>,
+    );
+    return entries.map(([level, t]) => ({
+      id: `slot-${level}`,
+      level: Number(level),
+      total: t?.total ?? 0,
+      used: t?.used ?? 0,
+      type: t?.type,
+    }));
+  }
+  return [];
+};
 
 export const useStore = create<State>()(
   persist(
@@ -190,18 +222,36 @@ export const useStore = create<State>()(
             ),
           })),
         })),
-      setSpellSlots: (id, level, patch) =>
+      addSpellSlotTier: (id, level) =>
         set((st) => ({
-          characters: patchChar(st.characters, id, (c) => {
-            const slots = { ...(c.spellSlots ?? {}) };
-            const current = slots[level] ?? { total: 0, used: 0 };
-            const next: SpellSlotTier = { ...current, ...patch };
-            // Keep values sane: non-negative, and used never exceeds total.
-            next.total = Math.max(0, next.total);
-            next.used = Math.max(0, Math.min(next.total, next.used));
-            slots[level] = next;
-            return { ...c, spellSlots: slots };
-          }),
+          characters: patchChar(st.characters, id, (c) => ({
+            ...c,
+            spellSlots: [
+              ...(c.spellSlots ?? []),
+              { id: crypto.randomUUID(), level, total: 0, used: 0, type: "" },
+            ],
+          })),
+        })),
+      updateSpellSlotTier: (id, tierId, patch) =>
+        set((st) => ({
+          characters: patchChar(st.characters, id, (c) => ({
+            ...c,
+            spellSlots: (c.spellSlots ?? []).map((t) => {
+              if (t.id !== tierId) return t;
+              const next: SpellSlotTier = { ...t, ...patch };
+              // Keep values sane: non-negative, and used never exceeds total.
+              next.total = Math.max(0, next.total);
+              next.used = Math.max(0, Math.min(next.total, next.used));
+              return next;
+            }),
+          })),
+        })),
+      removeSpellSlotTier: (id, tierId) =>
+        set((st) => ({
+          characters: patchChar(st.characters, id, (c) => ({
+            ...c,
+            spellSlots: (c.spellSlots ?? []).filter((t) => t.id !== tierId),
+          })),
         })),
       addAbility: (id, a) =>
         set((s) => ({
@@ -308,7 +358,23 @@ export const useStore = create<State>()(
           })),
         })),
     }),
-    { name: "grimoire-characters-v1" },
+    {
+      name: "grimoire-characters-v1",
+      version: 1,
+      // v1: spellSlots went from Record<level, tier> to a flat tier array.
+      migrate: (persisted) => {
+        const state = persisted as {
+          characters?: Record<string, unknown>[];
+        } & Record<string, unknown>;
+        if (Array.isArray(state.characters)) {
+          state.characters = state.characters.map((c) => ({
+            ...c,
+            spellSlots: normalizeSpellSlots(c.spellSlots),
+          }));
+        }
+        return state as unknown as State;
+      },
+    },
   ),
 );
 
