@@ -64,6 +64,12 @@ export interface HomebrewAbility {
   description: string;
 }
 
+/** Spell slots for one tier: how many the character has and how many are spent. */
+export interface SpellSlotTier {
+  total: number;
+  used: number;
+}
+
 /** Which equipment slot an item fits (undefined = not slot-equippable). */
 export type SlotKind =
   | "Head"
@@ -197,6 +203,7 @@ export interface Character {
   concentrationMax: number; // max simultaneous concentration spells (default 1)
   classes: HomebrewClass[];
   spells: HomebrewSpell[];
+  spellSlots: Record<number, SpellSlotTier>; // spell level (1-9) -> slots
   abilities: HomebrewAbility[];
   inventory: InventoryItem[];
   equipment: Record<string, string>; // slot id -> equipped item id
@@ -241,6 +248,7 @@ export const createCharacter = (name = "New Adventurer"): Character => ({
   concentrationMax: 1,
   classes: [],
   spells: [],
+  spellSlots: {},
   abilities: [],
   inventory: [],
   equipment: {},

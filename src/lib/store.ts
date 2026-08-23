@@ -9,6 +9,7 @@ import {
   HomebrewSpell,
   InventoryItem,
   LevelEntry,
+  SpellSlotTier,
   StatKey,
   Stats,
 } from "./types";
@@ -34,6 +35,11 @@ interface State {
   addSpell: (id: string, s: Omit<HomebrewSpell, "id">) => void;
   removeSpell: (id: string, sid: string) => void;
   updateSpell: (id: string, sid: string, patch: Partial<HomebrewSpell>) => void;
+  setSpellSlots: (
+    id: string,
+    level: number,
+    patch: Partial<SpellSlotTier>,
+  ) => void;
   addAbility: (id: string, a: Omit<HomebrewAbility, "id">) => void;
   removeAbility: (id: string, aid: string) => void;
   addItem: (id: string, item: Omit<InventoryItem, "id">) => boolean;
@@ -183,6 +189,19 @@ export const useStore = create<State>()(
               x.id === sid ? { ...x, ...patch } : x,
             ),
           })),
+        })),
+      setSpellSlots: (id, level, patch) =>
+        set((st) => ({
+          characters: patchChar(st.characters, id, (c) => {
+            const slots = { ...(c.spellSlots ?? {}) };
+            const current = slots[level] ?? { total: 0, used: 0 };
+            const next: SpellSlotTier = { ...current, ...patch };
+            // Keep values sane: non-negative, and used never exceeds total.
+            next.total = Math.max(0, next.total);
+            next.used = Math.max(0, Math.min(next.total, next.used));
+            slots[level] = next;
+            return { ...c, spellSlots: slots };
+          }),
         })),
       addAbility: (id, a) =>
         set((s) => ({

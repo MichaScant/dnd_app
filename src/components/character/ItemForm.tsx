@@ -363,15 +363,19 @@ export function ItemForm({
           ? Number(form.strengthReq)
           : undefined,
       armorWeight:
-        equippable && showArmorFields ? form.armorWeight || undefined : undefined,
+        equippable && showArmorFields
+          ? form.armorWeight || undefined
+          : undefined,
       weapon: equippable && isWeapon ? buildWeapon() : undefined,
-      shieldType: equippable && isShield ? form.shieldType || undefined : undefined,
+      shieldType:
+        equippable && isShield ? form.shieldType || undefined : undefined,
       shieldAc:
         equippable && isShield && form.shieldAc
           ? Number(form.shieldAc)
           : undefined,
       consumable: form.consumable || undefined,
-      modifiers: mods.length ? expandMods(mods) : undefined,
+      // Modifiers only apply while equipped, so consumables carry none.
+      modifiers: equippable && mods.length ? expandMods(mods) : undefined,
     };
     if (editing) {
       updateItem(c.id, editing.id, base); // patch keeps the item's original kind
@@ -460,9 +464,7 @@ export function ItemForm({
           <Checkbox
             id="item-consumable"
             checked={form.consumable}
-            onCheckedChange={(v) =>
-              setForm((f) => ({ ...f, consumable: !!v }))
-            }
+            onCheckedChange={(v) => setForm((f) => ({ ...f, consumable: !!v }))}
           />
           <Label
             htmlFor="item-consumable"

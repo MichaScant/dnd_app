@@ -5,7 +5,7 @@ import { equippedSlotLabel } from "@/lib/equipment";
 import { ItemForm } from "@/components/character/ItemForm";
 import { ItemRow } from "@/components/character/ItemRow";
 import { SrdItemPicker } from "@/components/character/SrdItemPicker";
-import { Backpack } from "lucide-react";
+import { Backpack, FlaskConical } from "lucide-react";
 
 /** Best-effort carried weight: pull a leading number out of "3 lb." × quantity. */
 const carriedWeight = (items: InventoryItem[]): number =>
@@ -28,12 +28,29 @@ export function InventoryTab({ c }: { c: Character }) {
   const [editing, setEditing] = useState<InventoryItem | null>(null);
 
   const inventory = c.inventory ?? [];
+  const pack = inventory.filter((it) => !it.consumable);
+  const consumables = inventory.filter((it) => it.consumable);
   const weight = carriedWeight(inventory);
 
   const startEdit = (it: InventoryItem) => {
     setEditing(it);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
+
+  const renderRow = (it: InventoryItem) => (
+    <ItemRow
+      key={it.id}
+      it={it}
+      equippedLabel={equippedSlotLabel(c, it.id)}
+      onQty={(delta) =>
+        updateItem(c.id, it.id, {
+          quantity: Math.max(1, it.quantity + delta),
+        })
+      }
+      onEdit={() => startEdit(it)}
+      onRemove={() => removeItem(c.id, it.id)}
+    />
+  );
 
   return (
     <div className="space-y-6">
@@ -73,29 +90,37 @@ export function InventoryTab({ c }: { c: Character }) {
             )}
           </div>
 
-          {byCategory(inventory).map(([category, items]) => (
-            <section key={category} className="grimoire-card p-5">
-              <h4 className="font-display text-sm uppercase tracking-widest text-primary mb-3">
-                {category}
-              </h4>
-              <div className="space-y-3">
-                {items.map((it) => (
-                  <ItemRow
-                    key={it.id}
-                    it={it}
-                    equippedLabel={equippedSlotLabel(c, it.id)}
-                    onQty={(delta) =>
-                      updateItem(c.id, it.id, {
-                        quantity: Math.max(1, it.quantity + delta),
-                      })
-                    }
-                    onEdit={() => startEdit(it)}
-                    onRemove={() => removeItem(c.id, it.id)}
-                  />
-                ))}
-              </div>
-            </section>
-          ))}
+          {/* Pack — carried & worn gear, grouped by category */}
+          {pack.length > 0 && (
+            <div className="space-y-4">
+              <h3 className="font-display text-lg flex items-center gap-2">
+                <Backpack className="h-4 w-4 text-primary" /> Pack
+              </h3>
+              {byCategory(pack).map(([category, items]) => (
+                <section key={category} className="grimoire-card p-5">
+                  <h4 className="font-display text-sm uppercase tracking-widest text-primary mb-3">
+                    {category}
+                  </h4>
+                  <div className="space-y-3">{items.map(renderRow)}</div>
+                </section>
+              ))}
+            </div>
+          )}
+
+          {/* Consumables — potions, scrolls, ammo… kept apart from the pack */}
+          {consumables.length > 0 && (
+            <div className="space-y-4">
+              <h3 className="font-display text-lg flex items-center gap-2">
+                <FlaskConical className="h-4 w-4 text-primary" /> Consumables
+              </h3>
+              <section className="grimoire-card p-5">
+                <p className="text-[11px] text-muted-foreground mb-3">
+                  Use the − button to spend one as you go.
+                </p>
+                <div className="space-y-3">{consumables.map(renderRow)}</div>
+              </section>
+            </div>
+          )}
         </>
       )}
     </div>

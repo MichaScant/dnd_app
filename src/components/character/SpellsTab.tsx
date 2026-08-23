@@ -4,6 +4,7 @@ import { Character, HomebrewSpell } from "@/lib/types";
 import { useStore, concentrationCount } from "@/lib/store";
 import { SpellForm } from "@/components/character/SpellForm";
 import { SpellCard } from "@/components/character/SpellCard";
+import { SpellSlotTracker } from "@/components/character/SpellSlotTracker";
 import {
   ConcentrationDialog,
   CastPrompt,
@@ -23,9 +24,11 @@ const byLevel = (spells: HomebrewSpell[]): [number, HomebrewSpell[]][] => {
 const levelLabel = (lvl: number) => (lvl === 0 ? "Cantrips" : `Level ${lvl}`);
 
 export function SpellsTab({ c }: { c: Character }) {
-  const { removeSpell, addEffect, removeEffect } = useStore();
+  const { removeSpell, addEffect, removeEffect, setSpellSlots } = useStore();
   const [editing, setEditing] = useState<HomebrewSpell | null>(null);
   const [prompt, setPrompt] = useState<CastPrompt | null>(null);
+
+  const spellSlots = c.spellSlots ?? {};
 
   const max = c.concentrationMax ?? 1;
   const activeConcentration = c.effects.filter((e) => e.concentration);
@@ -118,6 +121,16 @@ export function SpellsTab({ c }: { c: Character }) {
             <h4 className="font-display text-sm uppercase tracking-widest text-primary mb-3">
               {levelLabel(lvl)}
             </h4>
+            {/* Cantrips (level 0) don't use spell slots. */}
+            {lvl > 0 && (
+              <SpellSlotTracker
+                level={lvl}
+                total={spellSlots[lvl]?.total ?? 0}
+                used={spellSlots[lvl]?.used ?? 0}
+                onChangeTotal={(n) => setSpellSlots(c.id, lvl, { total: n })}
+                onChangeUsed={(n) => setSpellSlots(c.id, lvl, { used: n })}
+              />
+            )}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {spells.map((s) => (
                 <SpellCard
