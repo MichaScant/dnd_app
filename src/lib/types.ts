@@ -205,7 +205,7 @@ export interface LevelEntry {
 export interface Character {
   id: string;
   name: string;
-  portrait?: string; // uploaded character image, stored as a data URL
+  portrait?: string; // legacy inline image; migrated to IndexedDB (portraitStore)
   race: string;
   classSummary: string;
   level: number;

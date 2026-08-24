@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { deletePortrait } from "./portraitStore";
 import {
   Character,
   createCharacter,
@@ -120,7 +121,8 @@ export const useStore = create<State>()(
         set((s) => ({ characters: [...s.characters, c], activeId: c.id }));
         return c.id;
       },
-      removeCharacter: (id) =>
+      removeCharacter: (id) => {
+        deletePortrait(id).catch(() => {}); // drop the portrait from IndexedDB
         set((s) => {
           const remaining = s.characters.filter((c) => c.id !== id);
           return {
@@ -128,7 +130,8 @@ export const useStore = create<State>()(
             activeId:
               s.activeId === id ? (remaining[0]?.id ?? null) : s.activeId,
           };
-        }),
+        });
+      },
       setActive: (id) => set({ activeId: id }),
       update: (id, patch) =>
         set((s) => ({

@@ -1,27 +1,33 @@
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { ImagePlus, X } from "lucide-react";
+import { Character } from "@/lib/types";
+import { useStore } from "@/lib/store";
+import { usePortrait, savePortrait, deletePortrait } from "@/lib/portraitStore";
+import { ImageCropper } from "@/components/character/ImageCropper";
+import { ImagePlus, Crop, Upload, X } from "lucide-react";
 
-// Portraits are downscaled and re-encoded before storage so they stay small
-// enough for localStorage (a full-res photo would blow the ~5 MB budget fast).
-const MAX_DIM = 512;
-const JPEG_QUALITY = 0.85;
+// Bound the stored original so re-cropping stays cheap without keeping a raw
+// multi-megapixel photo around.
+const SOURCE_MAX = 1280;
 
-/** Load an image file, downscale to MAX_DIM, and return a compact JPEG data URL. */
-function toPortraitDataUrl(file: File): Promise<string> {
+/** Load an image file and downscale it to at most SOURCE_MAX on its long side. */
+function fileToBoundedDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     const img = new Image();
-
     reader.onerror = () => reject(new Error("read failed"));
     reader.onload = () => {
       img.src = reader.result as string;
     };
     img.onerror = () => reject(new Error("decode failed"));
     img.onload = () => {
-      const scale = Math.min(1, MAX_DIM / Math.max(img.width, img.height));
-      const w = Math.max(1, Math.round(img.width * scale));
-      const h = Math.max(1, Math.round(img.height * scale));
+      const scale = Math.min(1, SOURCE_MAX / Math.max(img.width, img.height));
+      if (scale === 1) {
+        resolve(reader.result as string); // already small enough
+        return;
+      }
+      const w = Math.round(img.width * scale);
+      const h = Math.round(img.height * scale);
       const canvas = document.createElement("canvas");
       canvas.width = w;
       canvas.height = h;
@@ -31,27 +37,32 @@ function toPortraitDataUrl(file: File): Promise<string> {
         return;
       }
       ctx.drawImage(img, 0, 0, w, h);
-      resolve(canvas.toDataURL("image/jpeg", JPEG_QUALITY));
+      resolve(canvas.toDataURL("image/jpeg", 0.9));
     };
-
     reader.readAsDataURL(file);
   });
 }
 
 /**
- * A framed character portrait with click-to-upload. Shows the image when set
- * (hover to change, × to remove) or an upload prompt when empty.
+ * A framed character portrait with upload + crop. The image is stored in
+ * IndexedDB (see portraitStore); the character only references it by id.
  */
-export function CharacterPortrait({
-  src,
-  name,
-  onChange,
-}: {
-  src?: string;
-  name: string;
-  onChange: (dataUrl: string | undefined) => void;
-}) {
+export function CharacterPortrait({ c }: { c: Character }) {
+  const { update } = useStore();
+  const record = usePortrait(c.id);
   const inputRef = useRef<HTMLInputElement>(null);
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
+
+  // One-time migration: an older build stored the image inline on the
+  // character (localStorage). Move it into IndexedDB, then clear the field.
+  useEffect(() => {
+    if (!c.portrait) return;
+    const url = c.portrait;
+    savePortrait(c.id, { source: url, cropped: url }).finally(() =>
+      update(c.id, { portrait: undefined }),
+    );
+  }, [c.portrait, c.id, update]);
+
   const pick = () => inputRef.current?.click();
 
   const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -63,12 +74,25 @@ export function CharacterPortrait({
       return;
     }
     try {
-      onChange(await toPortraitDataUrl(file));
-      toast.success("Portrait updated");
+      setCropSrc(await fileToBoundedDataUrl(file)); // opens the cropper
     } catch {
       toast.error("Couldn't load that image");
     }
   };
+
+  const onConfirmCrop = async (cropped: string) => {
+    const source = cropSrc;
+    setCropSrc(null);
+    if (!source) return;
+    try {
+      await savePortrait(c.id, { source, cropped });
+      toast.success("Portrait saved");
+    } catch {
+      toast.error("Couldn't save the portrait");
+    }
+  };
+
+  const cropped = record?.cropped;
 
   return (
     <div className="shrink-0 mx-auto md:mx-0">
@@ -80,24 +104,38 @@ export function CharacterPortrait({
         onChange={onFile}
       />
       <div className="relative w-32 aspect-[3/4] rounded-lg overflow-hidden border border-border bg-background/40 group">
-        {src ? (
+        {cropped ? (
           <>
             <img
-              src={src}
-              alt={`${name || "Character"} portrait`}
+              src={cropped}
+              alt={`${c.name || "Character"} portrait`}
               className="h-full w-full object-cover"
             />
+            <div className="absolute inset-x-0 bottom-0 flex justify-center gap-2 p-1.5 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity">
+              {record?.source && (
+                <button
+                  type="button"
+                  onClick={() => setCropSrc(record.source)}
+                  className="text-white/90 hover:text-white"
+                  title="Adjust crop"
+                  aria-label="Adjust crop"
+                >
+                  <Crop className="h-4 w-4" />
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={pick}
+                className="text-white/90 hover:text-white"
+                title="Replace image"
+                aria-label="Replace image"
+              >
+                <Upload className="h-4 w-4" />
+              </button>
+            </div>
             <button
               type="button"
-              onClick={pick}
-              className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-black/50 text-white opacity-0 group-hover:opacity-100 transition-opacity"
-            >
-              <ImagePlus className="h-5 w-5" />
-              <span className="text-[11px]">Change</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => onChange(undefined)}
+              onClick={() => deletePortrait(c.id)}
               className="absolute top-1 right-1 rounded-full bg-black/60 p-1 text-white hover:bg-destructive"
               aria-label="Remove portrait"
             >
@@ -115,6 +153,14 @@ export function CharacterPortrait({
           </button>
         )}
       </div>
+
+      {cropSrc && (
+        <ImageCropper
+          src={cropSrc}
+          onCancel={() => setCropSrc(null)}
+          onConfirm={onConfirmCrop}
+        />
+      )}
     </div>
   );
 }

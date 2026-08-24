@@ -47,11 +47,7 @@ export function OverviewTab({ c }: { c: Character }) {
       {/* Identity */}
       <section className="grimoire-card p-6">
         <div className="flex flex-col md:flex-row gap-6">
-          <CharacterPortrait
-            src={c.portrait}
-            name={c.name}
-            onChange={(url) => update(c.id, { portrait: url })}
-          />
+          <CharacterPortrait c={c} />
           <div className="flex-1 grid grid-cols-1 md:grid-cols-4 gap-4">
             <Field label="Name" className="md:col-span-2">
               <Input
