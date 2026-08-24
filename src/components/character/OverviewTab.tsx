@@ -424,7 +424,7 @@ function HpInput({
           (e.target as HTMLInputElement).blur();
         }
       }}
-      className="text-center text-2xl font-display h-12 min-w-[5.5rem]"
+      className="text-center text-xl sm:text-2xl font-display h-12 flex-1 min-w-0 px-1"
     />
   );
 }

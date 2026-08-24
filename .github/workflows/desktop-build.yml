@@ -1,0 +1,39 @@
+name: Desktop build
+
+# Builds the Grimoire desktop app for macOS and Windows in parallel.
+# Trigger by pushing a version tag (e.g. `git tag v0.1.0 && git push --tags`)
+# or manually from the Actions tab. Installers are uploaded as artifacts.
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Build desktop app (host OS)
+        run: bun run electron:dist
+
+      - name: Upload installers
+        uses: actions/upload-artifact@v4
+        with:
+          name: grimoire-${{ matrix.os }}
+          if-no-files-found: error
+          path: |
+            release/*.dmg
+            release/*.exe
+            release/*.AppImage

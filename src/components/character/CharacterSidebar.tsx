@@ -7,7 +7,20 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Plus, Skull, Swords, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+/** Persistent sidebar for wide screens; collapses to a drawer below `lg`. */
 export function CharacterSidebar() {
+  return (
+    <aside className="hidden lg:flex w-72 shrink-0 border-r border-border bg-card/40 backdrop-blur-sm flex-col h-screen sticky top-0">
+      <SidebarBody />
+    </aside>
+  );
+}
+
+/**
+ * The sidebar's contents, reused inside the mobile drawer. `onNavigate` fires
+ * after picking/creating a character so the drawer can close.
+ */
+export function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
   const { characters, activeId, setActive, addCharacter, removeCharacter } =
     useStore();
   const [newName, setNewName] = useState("");
@@ -15,13 +28,14 @@ export function CharacterSidebar() {
   const create = () => {
     addCharacter(newName.trim() || "New Adventurer");
     setNewName("");
+    onNavigate?.();
   };
 
   return (
-    <aside className="w-72 shrink-0 border-r border-border bg-card/40 backdrop-blur-sm flex flex-col h-screen sticky top-0">
+    <div className="flex flex-col h-full min-h-0">
       <div className="p-5 border-b border-border">
         <div className="flex items-center gap-2 mb-1">
-          <Swords className="h-5 w-5 text-primary" />
+          <Swords className="h-5 w-5 text-primary shrink-0" />
           <h1 className="font-display text-xl text-gradient-ember">Grimoire</h1>
         </div>
         <p className="text-xs text-muted-foreground">Adventurer's Codex</p>
@@ -40,7 +54,7 @@ export function CharacterSidebar() {
         </Button>
       </div>
 
-      <ScrollArea className="flex-1">
+      <ScrollArea className="flex-1 min-h-0">
         <div className="p-2 space-y-1">
           {characters.length === 0 && (
             <p className="text-xs text-muted-foreground p-4 text-center">
@@ -52,13 +66,16 @@ export function CharacterSidebar() {
               key={c.id}
               c={c}
               active={c.id === activeId}
-              onSelect={() => setActive(c.id)}
+              onSelect={() => {
+                setActive(c.id);
+                onNavigate?.();
+              }}
               onRemove={() => removeCharacter(c.id)}
             />
           ))}
         </div>
       </ScrollArea>
-    </aside>
+    </div>
   );
 }
 

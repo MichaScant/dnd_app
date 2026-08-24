@@ -8,6 +8,9 @@ dist
 .nitro
 .tanstack
 
+# Desktop (Electron) packaged builds
+release
+
 # Logs
 *.log
 npm-debug.log*

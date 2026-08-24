@@ -1,15 +1,26 @@
 {
   "name": "tanstack_start_ts",
   "private": true,
+  "version": "0.1.0",
+  "description": "Grimoire — D&D 5e character manager",
+  "author": "Grimoire",
+  "main": "electron/main.cjs",
   "sideEffects": false,
   "type": "module",
+  "trustedDependencies": [
+    "electron"
+  ],
   "scripts": {
     "dev": "vite dev",
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "lint": "eslint .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "electron:build-web": "cross-env NITRO_PRESET=node-server vite build",
+    "electron:start": "electron .",
+    "electron:dev": "cross-env NITRO_PRESET=node-server vite build && electron .",
+    "electron:dist": "cross-env NITRO_PRESET=node-server vite build && electron-builder --publish never"
   },
   "dependencies": {
     "@capacitor/android": "^8.4.1",
@@ -77,6 +88,9 @@
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "@vitejs/plugin-react": "^5.0.4",
+    "cross-env": "^10.1.0",
+    "electron": "^43.4.1",
+    "electron-builder": "^26.15.3",
     "eslint": "^9.32.0",
     "eslint-config-prettier": "^10.1.1",
     "eslint-plugin-prettier": "^5.2.6",
@@ -88,5 +102,41 @@
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.56.1",
     "vite": "^7.3.1"
+  },
+  "build": {
+    "appId": "app.grimoire.desktop",
+    "productName": "Grimoire",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "electron/**/*",
+      "package.json",
+      "!node_modules/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": ".output",
+        "to": "output"
+      }
+    ],
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "category": "public.app-category.games",
+      "identity": null
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "category": "Game"
+    }
   }
 }
