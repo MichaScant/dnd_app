@@ -22,6 +22,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { EquipmentBox } from "@/components/character/EquipmentBox";
+import { ResourcesCard } from "@/components/character/ResourcesCard";
 import { DEFAULT_SKILLS } from "@/lib/types";
 import { Heart, Shield, Footprints, Sparkles, Star, Zap } from "lucide-react";
 
@@ -199,6 +200,9 @@ export function OverviewTab({ c }: { c: Character }) {
           );
         })()}
       </section>
+
+      {/* Custom campaign resources (mana, ki, …) */}
+      <ResourcesCard c={c} />
 
       {/* Stats */}
       <section className="grimoire-card p-6">

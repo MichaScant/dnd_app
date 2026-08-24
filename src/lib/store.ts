@@ -9,6 +9,7 @@ import {
   HomebrewSpell,
   InventoryItem,
   LevelEntry,
+  Resource,
   SpellSlotTier,
   StatKey,
   Stats,
@@ -44,6 +45,13 @@ interface State {
   removeSpellSlotTier: (id: string, tierId: string) => void;
   addAbility: (id: string, a: Omit<HomebrewAbility, "id">) => void;
   removeAbility: (id: string, aid: string) => void;
+  addResource: (id: string, resource: Omit<Resource, "id">) => void;
+  updateResource: (
+    id: string,
+    rid: string,
+    patch: Partial<Omit<Resource, "id">>,
+  ) => void;
+  removeResource: (id: string, rid: string) => void;
   addItem: (id: string, item: Omit<InventoryItem, "id">) => boolean;
   removeItem: (id: string, iid: string) => void;
   updateItem: (id: string, iid: string, patch: Partial<InventoryItem>) => void;
@@ -88,6 +96,17 @@ const normalizeSpellSlots = (raw: unknown): SpellSlotTier[] => {
     }));
   }
   return [];
+};
+
+/**
+ * Keep a resource sane: a non-positive/undefined max means "uncapped"; current
+ * is never negative and never exceeds a real max.
+ */
+const clampResource = (r: Resource): Resource => {
+  const max = r.max != null && r.max > 0 ? r.max : undefined;
+  let current = Math.max(0, r.current || 0);
+  if (max != null) current = Math.min(current, max);
+  return { ...r, max, current };
 };
 
 export const useStore = create<State>()(
@@ -265,6 +284,32 @@ export const useStore = create<State>()(
           characters: patchChar(s.characters, id, (c) => ({
             ...c,
             abilities: c.abilities.filter((x) => x.id !== aid),
+          })),
+        })),
+      addResource: (id, resource) =>
+        set((s) => ({
+          characters: patchChar(s.characters, id, (c) => ({
+            ...c,
+            resources: [
+              ...(c.resources ?? []),
+              clampResource({ ...resource, id: crypto.randomUUID() }),
+            ],
+          })),
+        })),
+      updateResource: (id, rid, patch) =>
+        set((s) => ({
+          characters: patchChar(s.characters, id, (c) => ({
+            ...c,
+            resources: (c.resources ?? []).map((r) =>
+              r.id === rid ? clampResource({ ...r, ...patch }) : r,
+            ),
+          })),
+        })),
+      removeResource: (id, rid) =>
+        set((s) => ({
+          characters: patchChar(s.characters, id, (c) => ({
+            ...c,
+            resources: (c.resources ?? []).filter((r) => r.id !== rid),
           })),
         })),
       addItem: (id, item) => {

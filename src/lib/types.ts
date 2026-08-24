@@ -65,6 +65,17 @@ export interface HomebrewAbility {
 }
 
 /**
+ * A custom, campaign-specific resource pool shown on the front sheet — mana,
+ * ki, grit, sorcery points, item charges, etc. `max` undefined = uncapped.
+ */
+export interface Resource {
+  id: string;
+  name: string;
+  current: number;
+  max?: number;
+}
+
+/**
  * One group of spell slots. A character can have several groups at the same
  * spell level — e.g. separate Wizard and Bard pools — so each carries its own
  * id, level, and (optional) caster class.
@@ -211,6 +222,7 @@ export interface Character {
   classes: HomebrewClass[];
   spells: HomebrewSpell[];
   spellSlots: SpellSlotTier[]; // slot groups across tiers (see SpellSlotTier)
+  resources: Resource[]; // custom campaign resource pools
   abilities: HomebrewAbility[];
   inventory: InventoryItem[];
   equipment: Record<string, string>; // slot id -> equipped item id
@@ -256,6 +268,7 @@ export const createCharacter = (name = "New Adventurer"): Character => ({
   classes: [],
   spells: [],
   spellSlots: [],
+  resources: [],
   abilities: [],
   inventory: [],
   equipment: {},
