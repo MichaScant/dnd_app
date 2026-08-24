@@ -23,6 +23,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { EquipmentBox } from "@/components/character/EquipmentBox";
 import { ResourcesCard } from "@/components/character/ResourcesCard";
+import { CharacterPortrait } from "@/components/character/CharacterPortrait";
 import { DEFAULT_SKILLS } from "@/lib/types";
 import { Heart, Shield, Footprints, Sparkles, Star, Zap } from "lucide-react";
 
@@ -45,78 +46,85 @@ export function OverviewTab({ c }: { c: Character }) {
     <div className="space-y-6">
       {/* Identity */}
       <section className="grimoire-card p-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Field label="Name" className="md:col-span-2">
-            <Input
-              value={c.name}
-              onChange={(e) => update(c.id, { name: e.target.value })}
-            />
-          </Field>
-          <Field label="Race">
-            <Input
-              value={c.race}
-              onChange={(e) => update(c.id, { race: e.target.value })}
-              placeholder="Tiefling…"
-            />
-          </Field>
-          <Field label="Class">
-            <Input
-              value={c.classSummary}
-              onChange={(e) => update(c.id, { classSummary: e.target.value })}
-              placeholder="Warlock 3 / Bard 2"
-            />
-          </Field>
-          <Field label="Level">
-            <Input
-              type="number"
-              value={c.level}
-              onChange={(e) => update(c.id, { level: +e.target.value || 1 })}
-            />
-          </Field>
-          <Field label="XP">
-            <Input
-              type="number"
-              value={c.xp}
-              onChange={(e) => update(c.id, { xp: +e.target.value || 0 })}
-            />
-          </Field>
-          <Field label="Proficiency Bonus">
-            <Input
-              type="number"
-              value={c.proficiencyBonus}
-              onChange={(e) =>
-                update(c.id, { proficiencyBonus: +e.target.value || 2 })
-              }
-            />
-          </Field>
-          <Field label="Concentration">
-            {(() => {
-              const current = concentrationCount(c.effects);
-              const max = c.concentrationMax ?? 1;
-              return (
-                <div className="flex items-center gap-1.5">
-                  <span
-                    className={`text-2xl font-display tabular-nums ${current > max ? "text-destructive" : current > 0 ? "text-primary" : ""}`}
-                  >
-                    {current}
-                  </span>
-                  <span className="text-muted-foreground">/</span>
-                  <Input
-                    type="number"
-                    min={1}
-                    value={max}
-                    onChange={(e) =>
-                      update(c.id, {
-                        concentrationMax: Math.max(1, +e.target.value || 1),
-                      })
-                    }
-                    className="w-16 text-center"
-                    aria-label="Maximum concentration"
-                  />
-                </div>
-              );
-            })()}
-          </Field>
+        <div className="flex flex-col md:flex-row gap-6">
+          <CharacterPortrait
+            src={c.portrait}
+            name={c.name}
+            onChange={(url) => update(c.id, { portrait: url })}
+          />
+          <div className="flex-1 grid grid-cols-1 md:grid-cols-4 gap-4">
+            <Field label="Name" className="md:col-span-2">
+              <Input
+                value={c.name}
+                onChange={(e) => update(c.id, { name: e.target.value })}
+              />
+            </Field>
+            <Field label="Race">
+              <Input
+                value={c.race}
+                onChange={(e) => update(c.id, { race: e.target.value })}
+                placeholder="Tiefling…"
+              />
+            </Field>
+            <Field label="Class">
+              <Input
+                value={c.classSummary}
+                onChange={(e) => update(c.id, { classSummary: e.target.value })}
+                placeholder="Warlock 3 / Bard 2"
+              />
+            </Field>
+            <Field label="Level">
+              <Input
+                type="number"
+                value={c.level}
+                onChange={(e) => update(c.id, { level: +e.target.value || 1 })}
+              />
+            </Field>
+            <Field label="XP">
+              <Input
+                type="number"
+                value={c.xp}
+                onChange={(e) => update(c.id, { xp: +e.target.value || 0 })}
+              />
+            </Field>
+            <Field label="Proficiency Bonus">
+              <Input
+                type="number"
+                value={c.proficiencyBonus}
+                onChange={(e) =>
+                  update(c.id, { proficiencyBonus: +e.target.value || 2 })
+                }
+              />
+            </Field>
+            <Field label="Concentration">
+              {(() => {
+                const current = concentrationCount(c.effects);
+                const max = c.concentrationMax ?? 1;
+                return (
+                  <div className="flex items-center gap-1.5">
+                    <span
+                      className={`text-2xl font-display tabular-nums ${current > max ? "text-destructive" : current > 0 ? "text-primary" : ""}`}
+                    >
+                      {current}
+                    </span>
+                    <span className="text-muted-foreground">/</span>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={max}
+                      onChange={(e) =>
+                        update(c.id, {
+                          concentrationMax: Math.max(1, +e.target.value || 1),
+                        })
+                      }
+                      className="w-16 text-center"
+                      aria-label="Maximum concentration"
+                    />
+                  </div>
+                );
+              })()}
+            </Field>
+          </div>
         </div>
       </section>
 

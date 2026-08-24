@@ -205,6 +205,7 @@ export interface LevelEntry {
 export interface Character {
   id: string;
   name: string;
+  portrait?: string; // uploaded character image, stored as a data URL
   race: string;
   classSummary: string;
   level: number;
