@@ -4,6 +4,7 @@ import { Character } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { ImportCharacterButton } from "@/components/character/ImportCharacterButton";
 import { Plus, Skull, Swords, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -52,6 +53,7 @@ export function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
         <Button onClick={create} className="w-full" variant="default">
           <Plus className="h-4 w-4 mr-1" /> Forge new hero
         </Button>
+        <ImportCharacterButton onNavigate={onNavigate} />
       </div>
 
       <ScrollArea className="flex-1 min-h-0">

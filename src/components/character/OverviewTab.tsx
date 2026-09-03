@@ -16,6 +16,7 @@ import {
   sumSaveBonus,
   sumSkillBonus,
   concentrationCount,
+  computeEffectiveSpeed,
 } from "@/lib/store";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,6 +24,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { EquipmentBox } from "@/components/character/EquipmentBox";
 import { ResourcesCard } from "@/components/character/ResourcesCard";
+import { SpeedCard } from "@/components/character/SpeedCard";
 import { CharacterPortrait } from "@/components/character/CharacterPortrait";
 import { DEFAULT_SKILLS } from "@/lib/types";
 import { Heart, Shield, Footprints, Sparkles, Star, Zap } from "lucide-react";
@@ -41,6 +43,11 @@ export function OverviewTab({ c }: { c: Character }) {
   )
     ? -10
     : 0;
+  const effSpeed = computeEffectiveSpeed(
+    c.speed,
+    c.speedModifiers ?? [],
+    speedPenalty,
+  );
 
   return (
     <div className="space-y-6">
@@ -164,19 +171,11 @@ export function OverviewTab({ c }: { c: Character }) {
           })()}
         </VitalCard>
         <VitalCard icon={<Footprints className="h-4 w-4" />} label="Speed">
-          <div className="relative">
-            <Input
-              type="number"
-              value={c.speed}
-              onChange={(e) => update(c.id, { speed: +e.target.value || 0 })}
-              className={`text-center text-2xl font-display h-12 ${speedPenalty !== 0 ? "pr-12" : ""}`}
-            />
-            {speedPenalty !== 0 && (
-              <span
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-sm font-display tabular-nums text-destructive"
-                title={`Heavy armor Strength requirement unmet: ${speedPenalty} ft = ${c.speed + speedPenalty}`}
-              >
-                = {c.speed + speedPenalty}
+          <div className="text-center text-2xl font-display h-12 flex items-center justify-center gap-1.5">
+            {effSpeed}
+            {effSpeed !== c.speed && (
+              <span className="text-xs text-muted-foreground">
+                (base {c.speed})
               </span>
             )}
           </div>
@@ -204,6 +203,9 @@ export function OverviewTab({ c }: { c: Character }) {
           );
         })()}
       </section>
+
+      {/* Speed: base + modifier calculator */}
+      <SpeedCard c={c} speedPenalty={speedPenalty} />
 
       {/* Custom campaign resources (mana, ki, …) */}
       <ResourcesCard c={c} />

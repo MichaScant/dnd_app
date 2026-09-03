@@ -65,6 +65,17 @@ export interface HomebrewAbility {
 }
 
 /**
+ * A bonus to walking speed shown on the sheet's Speed calculator — a flat add
+ * (e.g. +10 Tabaxi) or a multiplier (e.g. ×2 Haste).
+ */
+export interface SpeedModifier {
+  id: string;
+  label: string;
+  op: "add" | "mult";
+  value: number;
+}
+
+/**
  * A custom, campaign-specific resource pool shown on the front sheet — mana,
  * ki, grit, sorcery points, item charges, etc. `max` undefined = uncapped.
  */
@@ -224,6 +235,7 @@ export interface Character {
   spells: HomebrewSpell[];
   spellSlots: SpellSlotTier[]; // slot groups across tiers (see SpellSlotTier)
   resources: Resource[]; // custom campaign resource pools
+  speedModifiers: SpeedModifier[]; // bonuses feeding the Speed calculator
   abilities: HomebrewAbility[];
   inventory: InventoryItem[];
   equipment: Record<string, string>; // slot id -> equipped item id
@@ -270,6 +282,7 @@ export const createCharacter = (name = "New Adventurer"): Character => ({
   spells: [],
   spellSlots: [],
   resources: [],
+  speedModifiers: [],
   abilities: [],
   inventory: [],
   equipment: {},

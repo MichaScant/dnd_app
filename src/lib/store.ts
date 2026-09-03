@@ -11,6 +11,7 @@ import {
   InventoryItem,
   LevelEntry,
   Resource,
+  SpeedModifier,
   SpellSlotTier,
   StatKey,
   Stats,
@@ -23,6 +24,7 @@ interface State {
   activeId: string | null;
   savedEffects: SavedEffect[];
   addCharacter: (name?: string) => string;
+  importCharacter: (data: Partial<Character>) => string;
   removeCharacter: (id: string) => void;
   setActive: (id: string) => void;
   update: (id: string, patch: Partial<Character>) => void;
@@ -53,6 +55,13 @@ interface State {
     patch: Partial<Omit<Resource, "id">>,
   ) => void;
   removeResource: (id: string, rid: string) => void;
+  addSpeedModifier: (id: string) => void;
+  updateSpeedModifier: (
+    id: string,
+    mid: string,
+    patch: Partial<Omit<SpeedModifier, "id">>,
+  ) => void;
+  removeSpeedModifier: (id: string, mid: string) => void;
   addItem: (id: string, item: Omit<InventoryItem, "id">) => boolean;
   removeItem: (id: string, iid: string) => void;
   updateItem: (id: string, iid: string, patch: Partial<InventoryItem>) => void;
@@ -118,6 +127,22 @@ export const useStore = create<State>()(
       savedEffects: [],
       addCharacter: (name) => {
         const c = createCharacter(name);
+        set((s) => ({ characters: [...s.characters, c], activeId: c.id }));
+        return c.id;
+      },
+      // Insert a fully- or partially-formed character (e.g. from an import).
+      // Merges over createCharacter's defaults so every required field exists,
+      // always assigns a fresh id, and sanitizes the tricky nested arrays.
+      importCharacter: (data) => {
+        const base = createCharacter(data.name ?? "Imported Hero");
+        const c: Character = {
+          ...base,
+          ...data,
+          id: base.id, // never trust an incoming id
+          spellSlots: normalizeSpellSlots(data.spellSlots ?? base.spellSlots),
+          resources: (data.resources ?? base.resources).map(clampResource),
+          equipment: data.equipment ?? {},
+        };
         set((s) => ({ characters: [...s.characters, c], activeId: c.id }));
         return c.id;
       },
@@ -313,6 +338,34 @@ export const useStore = create<State>()(
           characters: patchChar(s.characters, id, (c) => ({
             ...c,
             resources: (c.resources ?? []).filter((r) => r.id !== rid),
+          })),
+        })),
+      addSpeedModifier: (id) =>
+        set((s) => ({
+          characters: patchChar(s.characters, id, (c) => ({
+            ...c,
+            speedModifiers: [
+              ...(c.speedModifiers ?? []),
+              { id: crypto.randomUUID(), label: "", op: "add", value: 0 },
+            ],
+          })),
+        })),
+      updateSpeedModifier: (id, mid, patch) =>
+        set((s) => ({
+          characters: patchChar(s.characters, id, (c) => ({
+            ...c,
+            speedModifiers: (c.speedModifiers ?? []).map((m) =>
+              m.id === mid ? { ...m, ...patch } : m,
+            ),
+          })),
+        })),
+      removeSpeedModifier: (id, mid) =>
+        set((s) => ({
+          characters: patchChar(s.characters, id, (c) => ({
+            ...c,
+            speedModifiers: (c.speedModifiers ?? []).filter(
+              (m) => m.id !== mid,
+            ),
           })),
         })),
       addItem: (id, item) => {
@@ -531,4 +584,22 @@ export const sumSkillBonus = (effects: Effect[], skill: string): number => {
     }
   }
   return total;
+};
+
+/**
+ * Effective walking speed. Modifiers apply *in list order* (so ordering
+ * matters — e.g. +10 then ×2 ≠ ×2 then +10), starting from the base minus any
+ * heavy-armor penalty. Floored at 0.
+ */
+export const computeEffectiveSpeed = (
+  base: number,
+  modifiers: SpeedModifier[],
+  penalty = 0,
+): number => {
+  let speed = base + penalty;
+  for (const m of modifiers) {
+    if (m.op === "add") speed += m.value;
+    else if (m.op === "mult") speed *= m.value || 1;
+  }
+  return Math.max(0, Math.round(speed));
 };
