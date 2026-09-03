@@ -10,6 +10,7 @@ import {
   HomebrewSpell,
   InventoryItem,
   LevelEntry,
+  modifier,
   Resource,
   SpeedModifier,
   SpellSlotTier,
@@ -32,8 +33,13 @@ interface State {
   toggleSave: (id: string, stat: StatKey) => void;
   toggleSkill: (id: string, skill: string) => void;
   cycleSkill: (id: string, skill: string) => void;
-  addEffect: (id: string, e: Omit<Effect, "id">) => boolean;
+  addEffect: (id: string, e: Omit<Effect, "id">) => string | null;
   removeEffect: (id: string, eid: string) => void;
+  addSpeedModifiersForEffect: (
+    id: string,
+    effectId: string,
+    rows: { label: string; op: "add" | "mult"; value: number }[],
+  ) => void;
   saveEffectToLibrary: (e: Omit<Effect, "id">) => void;
   removeSavedEffect: (sid: string) => void;
   addSpell: (id: string, s: Omit<HomebrewSpell, "id">) => void;
@@ -62,6 +68,7 @@ interface State {
     patch: Partial<Omit<SpeedModifier, "id">>,
   ) => void;
   removeSpeedModifier: (id: string, mid: string) => void;
+  moveSpeedModifier: (id: string, mid: string, dir: -1 | 1) => void;
   addItem: (id: string, item: Omit<InventoryItem, "id">) => boolean;
   removeItem: (id: string, iid: string) => void;
   updateItem: (id: string, iid: string, patch: Partial<InventoryItem>) => void;
@@ -216,26 +223,46 @@ export const useStore = create<State>()(
         })),
       addEffect: (id, e) => {
         // Refuse to apply the same effect twice (matched by name, case-insensitive).
-        let added = false;
+        let newId: string | null = null;
         const key = e.name.trim().toLowerCase();
         set((s) => ({
           characters: patchChar(s.characters, id, (c) => {
             if (c.effects.some((ex) => ex.name.trim().toLowerCase() === key))
               return c;
-            added = true;
+            newId = crypto.randomUUID();
             return {
               ...c,
-              effects: [...c.effects, { ...e, id: crypto.randomUUID() }],
+              effects: [...c.effects, { ...e, id: newId }],
             };
           }),
         }));
-        return added;
+        return newId;
       },
       removeEffect: (id, eid) =>
         set((s) => ({
           characters: patchChar(s.characters, id, (c) => ({
             ...c,
             effects: c.effects.filter((e) => e.id !== eid),
+            // Drop any Speed-card rows this effect (a cast spell) injected.
+            speedModifiers: (c.speedModifiers ?? []).filter(
+              (m) => m.source !== eid,
+            ),
+          })),
+        })),
+      addSpeedModifiersForEffect: (id, effectId, rows) =>
+        set((s) => ({
+          characters: patchChar(s.characters, id, (c) => ({
+            ...c,
+            speedModifiers: [
+              ...(c.speedModifiers ?? []),
+              ...rows.map((r) => ({
+                id: crypto.randomUUID(),
+                label: r.label,
+                op: r.op,
+                value: r.value,
+                source: effectId,
+              })),
+            ],
           })),
         })),
       saveEffectToLibrary: (e) =>
@@ -367,6 +394,17 @@ export const useStore = create<State>()(
               (m) => m.id !== mid,
             ),
           })),
+        })),
+      moveSpeedModifier: (id, mid, dir) =>
+        set((s) => ({
+          characters: patchChar(s.characters, id, (c) => {
+            const mods = [...(c.speedModifiers ?? [])];
+            const i = mods.findIndex((m) => m.id === mid);
+            const j = i + dir;
+            if (i < 0 || j < 0 || j >= mods.length) return c;
+            [mods[i], mods[j]] = [mods[j], mods[i]];
+            return { ...c, speedModifiers: mods };
+          }),
         })),
       addItem: (id, item) => {
         // Refuse to add the same item twice (matched by name, case-insensitive).
@@ -544,7 +582,8 @@ export const effectiveStats = (base: Stats, effects: Effect[]): Stats => {
   return out;
 };
 
-/** Sum modifier deltas across active effects for a given non-stat target. */
+/** Sum additive modifier deltas across active effects for a non-stat target.
+ *  "set" modifiers (AC overrides) are handled separately in effectiveAc. */
 export const sumEffectBonus = (
   effects: Effect[],
   target:
@@ -553,15 +592,39 @@ export const sumEffectBonus = (
     | "spellAttack"
     | "weaponAttack"
     | "damage"
-    | "extraAction",
+    | "extraAction"
+    | "speed",
 ): number => {
   let total = 0;
   for (const e of effects) {
     for (const m of e.modifiers) {
-      if (m.target === target) total += m.delta;
+      if (m.target === target && (m.op ?? "add") === "add") total += m.delta;
     }
   }
   return total;
+};
+
+/**
+ * Effective Armor Class: the highest of the manual base AC and any "set" AC
+ * from active spells/gear (e.g. Mage Armor 13+DEX, Barkskin 16), plus flat AC
+ * bonuses on top. `stats` should be the effective (buffed) ability scores.
+ */
+export const effectiveAc = (
+  c: Character,
+  effects: Effect[],
+  stats: Stats,
+): number => {
+  const acMods = effects
+    .flatMap((e) => e.modifiers)
+    .filter((m) => m.target === "ac");
+  const add = acMods
+    .filter((m) => (m.op ?? "add") === "add")
+    .reduce((sum, m) => sum + m.delta, 0);
+  const sets = acMods
+    .filter((m) => m.op === "set")
+    .map((m) => m.delta + (m.plusStat ? modifier(stats[m.plusStat]) : 0));
+  const base = sets.length ? Math.max(c.ac, ...sets) : c.ac;
+  return base + add;
 };
 
 /** Sum saving-throw bonuses for a specific ability stat across effects. */
@@ -586,17 +649,28 @@ export const sumSkillBonus = (effects: Effect[], skill: string): number => {
   return total;
 };
 
+/** Product of speed ×multipliers from active spells/gear (e.g. Haste ×2). */
+export const effectSpeedMult = (effects: Effect[]): number => {
+  let mult = 1;
+  for (const e of effects)
+    for (const m of e.modifiers)
+      if (m.target === "speed" && m.op === "mult") mult *= m.delta || 1;
+  return mult;
+};
+
 /**
- * Effective walking speed. Modifiers apply *in list order* (so ordering
- * matters — e.g. +10 then ×2 ≠ ×2 then +10), starting from the base minus any
- * heavy-armor penalty. Floored at 0.
+ * Effective walking speed: (base − armor penalty + flat spell/gear bonuses)
+ * × spell/gear multipliers (Haste), then the manual Speed-card modifiers *in
+ * list order* (so ordering matters — +10 then ×2 ≠ ×2 then +10). Floored at 0.
  */
 export const computeEffectiveSpeed = (
   base: number,
   modifiers: SpeedModifier[],
   penalty = 0,
+  extraAdd = 0,
+  extraMult = 1,
 ): number => {
-  let speed = base + penalty;
+  let speed = (base + penalty + extraAdd) * extraMult;
   for (const m of modifiers) {
     if (m.op === "add") speed += m.value;
     else if (m.op === "mult") speed *= m.value || 1;

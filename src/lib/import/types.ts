@@ -7,6 +7,8 @@ export interface ImportResult {
   /** Things that can't live on a 5e sheet — the user must add them manually. */
   warnings: string[];
   source: "pdf" | "tintagel";
+  /** Extracted portrait image as a data URL, if the sheet embedded one. */
+  portrait?: string;
 }
 
 /**

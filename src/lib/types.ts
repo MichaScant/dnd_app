@@ -73,6 +73,7 @@ export interface SpeedModifier {
   label: string;
   op: "add" | "mult";
   value: number;
+  source?: string; // effect id when injected by a cast spell (auto-removed on end)
 }
 
 /**
@@ -153,7 +154,8 @@ export type ModTarget =
   | "damage"
   | "save"
   | "skill"
-  | "extraAction";
+  | "extraAction"
+  | "speed";
 
 export const MOD_TARGET_LABELS: Record<ModTarget, string> = {
   stat: "Ability Score",
@@ -165,6 +167,7 @@ export const MOD_TARGET_LABELS: Record<ModTarget, string> = {
   save: "Saving Throw",
   skill: "Skill Check",
   extraAction: "Extra Action",
+  speed: "Speed",
 };
 
 export interface StatModifier {
@@ -173,6 +176,8 @@ export interface StatModifier {
   skill?: string; // used when target = "skill"
   delta: number; // can be negative
   note?: string;
+  op?: "add" | "set" | "mult"; // "set" overrides AC; "mult" multiplies speed; default "add"
+  plusStat?: StatKey; // for op="set" on AC: value = delta + modifier(plusStat), e.g. Mage Armor 13+DEX
 }
 
 export const SKILL_ABILITY: Record<string, StatKey> = {
@@ -230,6 +235,8 @@ export interface Character {
   skillProficiencies: string[];
   skillExpertise: string[];
   proficiencyBonus: number;
+  spellAbility?: StatKey; // spellcasting ability for Save DC / attack (optional)
+  spellDcBase?: number; // base for Spell Save DC (default 8)
   concentrationMax: number; // max simultaneous concentration spells (default 1)
   classes: HomebrewClass[];
   spells: HomebrewSpell[];

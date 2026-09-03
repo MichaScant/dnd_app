@@ -21,6 +21,7 @@ export const TARGET_OPTIONS: ModTarget[] = [
   "save",
   "skill",
   "extraAction",
+  "speed",
 ];
 
 /** Expand any { stat: "all" } draft into one entry per ability score. */
@@ -39,6 +40,8 @@ export function expandMods(mods: DraftMod[]): StatModifier[] {
         skill: m.skill,
         delta: m.delta,
         note: m.note,
+        op: m.op,
+        plusStat: m.plusStat,
       });
     }
   }
@@ -57,6 +60,8 @@ export function modifierLabel(m: StatModifier): string {
     case "skill":
       return `${m.skill ?? "Skill"} ${sign}`;
     case "ac":
+      if (m.op === "set")
+        return `AC =${m.delta}${m.plusStat ? "+" + m.plusStat.toUpperCase() : ""}`;
       return `AC ${sign}`;
     case "dc":
       return `DC ${sign}`;
@@ -68,5 +73,7 @@ export function modifierLabel(m: StatModifier): string {
       return `DMG ${sign}`;
     case "extraAction":
       return `Action ${sign}`;
+    case "speed":
+      return m.op === "mult" ? `Speed ×${m.delta}` : `Speed ${sign}`;
   }
 }

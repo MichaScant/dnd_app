@@ -17,6 +17,8 @@ import {
   sumSkillBonus,
   concentrationCount,
   computeEffectiveSpeed,
+  effectSpeedMult,
+  effectiveAc,
 } from "@/lib/store";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,6 +27,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { EquipmentBox } from "@/components/character/EquipmentBox";
 import { ResourcesCard } from "@/components/character/ResourcesCard";
 import { SpeedCard } from "@/components/character/SpeedCard";
+import { SpellcastingCard } from "@/components/character/SpellcastingCard";
+import { ActiveEffectsCard } from "@/components/character/ActiveEffectsCard";
 import { CharacterPortrait } from "@/components/character/CharacterPortrait";
 import { DEFAULT_SKILLS } from "@/lib/types";
 import { Heart, Shield, Footprints, Sparkles, Star, Zap } from "lucide-react";
@@ -47,6 +51,8 @@ export function OverviewTab({ c }: { c: Character }) {
     c.speed,
     c.speedModifiers ?? [],
     speedPenalty,
+    sumEffectBonus(allEffects, "speed"),
+    effectSpeedMult(allEffects),
   );
 
   return (
@@ -149,21 +155,22 @@ export function OverviewTab({ c }: { c: Character }) {
         </VitalCard>
         <VitalCard icon={<Shield className="h-4 w-4" />} label="Armor Class">
           {(() => {
-            const acBonus = sumEffectBonus(allEffects, "ac");
+            const totalAc = effectiveAc(c, allEffects, effective);
+            const changed = totalAc !== c.ac;
             return (
               <div className="relative">
                 <Input
                   type="number"
                   value={c.ac}
                   onChange={(e) => update(c.id, { ac: +e.target.value || 0 })}
-                  className={`text-center text-2xl font-display h-12 ${acBonus !== 0 ? "pr-12" : ""}`}
+                  className={`text-center text-2xl font-display h-12 ${changed ? "pr-12" : ""}`}
                 />
-                {acBonus !== 0 && (
+                {changed && (
                   <span
-                    className={`absolute right-2 top-1/2 -translate-y-1/2 text-sm font-display tabular-nums ${acBonus > 0 ? "text-primary" : "text-destructive"}`}
-                    title={`Base ${c.ac}, ${acBonus > 0 ? `+${acBonus}` : acBonus} from effects & gear = ${c.ac + acBonus}`}
+                    className={`absolute right-2 top-1/2 -translate-y-1/2 text-sm font-display tabular-nums ${totalAc > c.ac ? "text-primary" : "text-destructive"}`}
+                    title={`Base ${c.ac}, effective ${totalAc} from set-AC / bonuses (spells & gear)`}
                   >
-                    = {c.ac + acBonus}
+                    = {totalAc}
                   </span>
                 )}
               </div>
@@ -203,12 +210,6 @@ export function OverviewTab({ c }: { c: Character }) {
           );
         })()}
       </section>
-
-      {/* Speed: base + modifier calculator */}
-      <SpeedCard c={c} speedPenalty={speedPenalty} />
-
-      {/* Custom campaign resources (mana, ki, …) */}
-      <ResourcesCard c={c} />
 
       {/* Stats */}
       <section className="grimoire-card p-6">
@@ -252,6 +253,18 @@ export function OverviewTab({ c }: { c: Character }) {
           })}
         </div>
       </section>
+
+      {/* Spellcasting: Save DC & attack */}
+      <SpellcastingCard c={c} />
+
+      {/* What's currently affecting the character */}
+      <ActiveEffectsCard c={c} />
+
+      {/* Speed: base + modifier calculator */}
+      <SpeedCard c={c} speedPenalty={speedPenalty} />
+
+      {/* Custom campaign resources (mana, ki, …) */}
+      <ResourcesCard c={c} />
 
       {/* Saving Throws + Skills */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

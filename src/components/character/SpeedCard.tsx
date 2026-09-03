@@ -1,9 +1,22 @@
 import { Character, SpeedModifier } from "@/lib/types";
-import { useStore, computeEffectiveSpeed } from "@/lib/store";
+import {
+  useStore,
+  computeEffectiveSpeed,
+  activeEffects,
+  sumEffectBonus,
+  effectSpeedMult,
+} from "@/lib/store";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Footprints, Plus, Trash2, TriangleAlert } from "lucide-react";
+import {
+  Footprints,
+  Plus,
+  Trash2,
+  TriangleAlert,
+  ChevronUp,
+  ChevronDown,
+} from "lucide-react";
 
 const OP_SELECT = "h-9 bg-input border border-border rounded-md px-2 text-sm";
 
@@ -19,10 +32,26 @@ export function SpeedCard({
   c: Character;
   speedPenalty: number;
 }) {
-  const { update, addSpeedModifier, updateSpeedModifier, removeSpeedModifier } =
-    useStore();
+  const {
+    update,
+    addSpeedModifier,
+    updateSpeedModifier,
+    removeSpeedModifier,
+    moveSpeedModifier,
+  } = useStore();
   const mods = c.speedModifiers ?? [];
-  const effective = computeEffectiveSpeed(c.speed, mods, speedPenalty);
+  // Flat + multiplicative "speed" bonuses from active spells & equipped gear.
+  const all = activeEffects(c);
+  const effectSpeed = sumEffectBonus(all, "speed");
+  const effectMult = effectSpeedMult(all);
+  const effective = computeEffectiveSpeed(
+    c.speed,
+    mods,
+    speedPenalty,
+    effectSpeed,
+    effectMult,
+  );
+  const start = (c.speed + speedPenalty + effectSpeed) * effectMult;
 
   return (
     <section className="grimoire-card p-6">
@@ -56,11 +85,35 @@ export function SpeedCard({
             {effective}
             <span className="text-sm text-muted-foreground ml-1">ft</span>
           </div>
+          {mods.length > 0 && (
+            <div className="text-[11px] text-muted-foreground mt-1 tabular-nums">
+              {start}
+              {mods.map((m, i) => (
+                <span key={i}>
+                  {" "}
+                  {m.op === "add"
+                    ? `${m.value >= 0 ? "+" : ""}${m.value}`
+                    : `×${m.value}`}
+                </span>
+              ))}{" "}
+              = {effective}
+            </div>
+          )}
+          {(effectSpeed !== 0 || effectMult !== 1) && (
+            <div className="text-[10px] text-muted-foreground mt-0.5">
+              incl.
+              {effectSpeed !== 0
+                ? ` ${effectSpeed > 0 ? "+" : ""}${effectSpeed} ft`
+                : ""}
+              {effectMult !== 1 ? ` ×${effectMult}` : ""} from active spells &
+              gear
+            </div>
+          )}
         </div>
       </div>
 
       <Label className="text-[11px] uppercase text-muted-foreground">
-        Modifiers
+        Modifiers <span className="normal-case">(applied top to bottom)</span>
       </Label>
       <div className="space-y-2 mt-1.5">
         {mods.length === 0 && (
@@ -69,12 +122,15 @@ export function SpeedCard({
             and so on.
           </p>
         )}
-        {mods.map((m) => (
+        {mods.map((m, i) => (
           <SpeedModRow
             key={m.id}
             m={m}
+            isFirst={i === 0}
+            isLast={i === mods.length - 1}
             onChange={(patch) => updateSpeedModifier(c.id, m.id, patch)}
             onRemove={() => removeSpeedModifier(c.id, m.id)}
+            onMove={(dir) => moveSpeedModifier(c.id, m.id, dir)}
           />
         ))}
       </div>
@@ -99,15 +155,49 @@ export function SpeedCard({
 
 function SpeedModRow({
   m,
+  isFirst,
+  isLast,
   onChange,
   onRemove,
+  onMove,
 }: {
   m: SpeedModifier;
+  isFirst: boolean;
+  isLast: boolean;
   onChange: (patch: Partial<Omit<SpeedModifier, "id">>) => void;
   onRemove: () => void;
+  onMove: (dir: -1 | 1) => void;
 }) {
   return (
     <div className="flex items-center gap-2 flex-wrap rounded-md border border-border bg-background/40 px-3 py-2">
+      <div className="flex flex-col shrink-0">
+        <button
+          type="button"
+          onClick={() => onMove(-1)}
+          disabled={isFirst}
+          className="text-muted-foreground hover:text-primary disabled:opacity-30"
+          aria-label="Move up"
+        >
+          <ChevronUp className="h-3.5 w-3.5" />
+        </button>
+        <button
+          type="button"
+          onClick={() => onMove(1)}
+          disabled={isLast}
+          className="text-muted-foreground hover:text-primary disabled:opacity-30"
+          aria-label="Move down"
+        >
+          <ChevronDown className="h-3.5 w-3.5" />
+        </button>
+      </div>
+      {m.source && (
+        <span
+          className="text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded border border-primary/40 text-primary shrink-0"
+          title="Added by a cast spell — clears when the spell ends"
+        >
+          spell
+        </span>
+      )}
       <Input
         value={m.label}
         onChange={(e) => onChange({ label: e.target.value })}

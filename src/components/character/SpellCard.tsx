@@ -1,17 +1,21 @@
 import { HomebrewSpell } from "@/lib/types";
 import { ModifierChips } from "@/components/character/ModifierChips";
 import { Button } from "@/components/ui/button";
-import { Trash2, Wand2, Brain, Pencil } from "lucide-react";
+import { Trash2, Wand2, Brain, Pencil, X } from "lucide-react";
 
 /** A single spell in the spellbook: stats, description, and a Cast action. */
 export function SpellCard({
   spell,
+  active,
   onCast,
+  onUncast,
   onEdit,
   onRemove,
 }: {
   spell: HomebrewSpell;
+  active: boolean;
   onCast: () => void;
+  onUncast: () => void;
   onEdit: () => void;
   onRemove: () => void;
 }) {
@@ -75,17 +79,27 @@ export function SpellCard({
       )}
       <ModifierChips modifiers={spell.modifiers} />
 
-      {castable && (
-        <Button
-          size="sm"
-          variant="secondary"
-          className="mt-3 w-full"
-          onClick={onCast}
-        >
-          <Wand2 className="h-3.5 w-3.5 mr-1.5" /> Cast
-          {spell.concentration ? "" : " (apply as effect)"}
-        </Button>
-      )}
+      {castable &&
+        (active ? (
+          <Button
+            size="sm"
+            variant="outline"
+            className="mt-3 w-full"
+            onClick={onUncast}
+          >
+            <X className="h-3.5 w-3.5 mr-1.5" /> End (active)
+          </Button>
+        ) : (
+          <Button
+            size="sm"
+            variant="secondary"
+            className="mt-3 w-full"
+            onClick={onCast}
+          >
+            <Wand2 className="h-3.5 w-3.5 mr-1.5" /> Cast
+            {spell.concentration ? "" : " (apply as effect)"}
+          </Button>
+        ))}
     </div>
   );
 }

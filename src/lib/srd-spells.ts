@@ -1,5 +1,6 @@
 import { HomebrewSpell } from "@/lib/types";
 import { SRD_ATTRIBUTION } from "@/lib/srd-license";
+import { detectSpellModifiers } from "@/lib/spellScan";
 import rawSpells from "@/data/srd-spells.json";
 
 export { SRD_ATTRIBUTION };
@@ -46,14 +47,19 @@ export const groupByLevel = (spells: SrdSpell[]): [number, SrdSpell[]][] => {
   return [...byLevel.entries()].sort((a, b) => a[0] - b[0]);
 };
 
-/** Convert an SRD spell into the character's homebrew-spell shape for storage. */
-export const toHomebrewSpell = (s: SrdSpell): Omit<HomebrewSpell, "id"> => ({
-  name: s.name,
-  level: s.level,
-  school: s.school,
-  castingTime: s.castingTime,
-  range: s.range,
-  duration: s.duration,
-  description: s.description,
-  concentration: s.concentration,
-});
+/** Convert an SRD spell into the character's homebrew-spell shape for storage.
+ *  Self-buff modifiers are auto-detected from the description (best-effort). */
+export const toHomebrewSpell = (s: SrdSpell): Omit<HomebrewSpell, "id"> => {
+  const modifiers = detectSpellModifiers(s.description);
+  return {
+    name: s.name,
+    level: s.level,
+    school: s.school,
+    castingTime: s.castingTime,
+    range: s.range,
+    duration: s.duration,
+    description: s.description,
+    concentration: s.concentration,
+    modifiers: modifiers.length ? modifiers : undefined,
+  };
+};

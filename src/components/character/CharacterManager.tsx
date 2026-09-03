@@ -11,7 +11,7 @@ import { AbilitiesTab } from "@/components/character/AbilitiesTab";
 import { ClassesTab } from "@/components/character/ClassesTab";
 import { InventoryTab } from "@/components/character/InventoryTab";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import {
   ScrollText,
@@ -97,24 +97,26 @@ export function CharacterManager() {
                   <Crown className="h-4 w-4 mr-1.5" /> Classes & Leveling
                 </TabsTrigger>
               </TabsList>
-              <TabsContent value="overview">
+              {/* Panels stay mounted and are toggled with `hidden`, so
+                  in-progress form text survives switching tabs. */}
+              <div hidden={tab !== "overview"}>
                 <OverviewTab c={c} />
-              </TabsContent>
-              <TabsContent value="effects">
+              </div>
+              <div hidden={tab !== "effects"}>
                 <EffectsTab c={c} />
-              </TabsContent>
-              <TabsContent value="spells">
+              </div>
+              <div hidden={tab !== "spells"}>
                 <SpellsTab c={c} />
-              </TabsContent>
-              <TabsContent value="inventory">
+              </div>
+              <div hidden={tab !== "inventory"}>
                 <InventoryTab c={c} />
-              </TabsContent>
-              <TabsContent value="abilities">
+              </div>
+              <div hidden={tab !== "abilities"}>
                 <AbilitiesTab c={c} />
-              </TabsContent>
-              <TabsContent value="classes">
+              </div>
+              <div hidden={tab !== "classes"}>
                 <ClassesTab c={c} />
-              </TabsContent>
+              </div>
             </Tabs>
           </div>
         )}

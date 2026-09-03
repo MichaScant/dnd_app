@@ -188,7 +188,7 @@ export function SpellForm({
           <ModifierEditor
             mods={mods}
             onChange={setMods}
-            emptyHint="No modifiers. Add some if casting this spell should change ability scores, AC, DC, saves, attack rolls, damage, or skills."
+            emptyHint="No modifiers. Add some if casting this spell should change ability scores, AC, DC, saves, attack rolls, damage, speed, or skills."
           />
         </div>
       </div>

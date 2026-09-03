@@ -29,6 +29,7 @@ export function SpellsTab({ c }: { c: Character }) {
     removeSpell,
     addEffect,
     removeEffect,
+    addSpeedModifiersForEffect,
     addSpellSlotTier,
     updateSpellSlotTier,
     removeSpellSlotTier,
@@ -40,8 +41,8 @@ export function SpellsTab({ c }: { c: Character }) {
 
   const max = c.concentrationMax ?? 1;
   const activeConcentration = c.effects.filter((e) => e.concentration);
-  const isActive = (name: string) =>
-    c.effects.some(
+  const activeEffectFor = (name: string) =>
+    c.effects.find(
       (e) => e.name.trim().toLowerCase() === name.trim().toLowerCase(),
     );
 
@@ -50,54 +51,97 @@ export function SpellsTab({ c }: { c: Character }) {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  /** Turn a spell into an active buff effect, reusing the effect engine. */
-  const applySpellEffect = (s: HomebrewSpell, concentrating: boolean) => {
-    const added = addEffect(c.id, {
+  const hasMods = (s: HomebrewSpell) => (s.modifiers?.length ?? 0) > 0;
+
+  /** Register the spell as an active effect. `applyMods` false = cast on
+   *  someone else, so no bonuses touch your sheet (but concentration still
+   *  counts, since you're the one concentrating). */
+  const doCast = (s: HomebrewSpell, applyMods: boolean) => {
+    const all = applyMods ? (s.modifiers ?? []) : [];
+    // Speed modifiers become rows on the Speed card; the rest live on the effect.
+    const speedMods = all.filter((m) => m.target === "speed");
+    const otherMods = all.filter((m) => m.target !== "speed");
+    const effectId = addEffect(c.id, {
       kind: "buff",
       name: s.name,
       description: s.description,
       duration: s.duration,
-      modifiers: s.modifiers ?? [],
-      concentration: concentrating,
+      modifiers: otherMods,
+      concentration: !!s.concentration,
     });
-    if (added)
+    if (effectId) {
+      if (speedMods.length)
+        addSpeedModifiersForEffect(
+          c.id,
+          effectId,
+          speedMods.map((m) => ({
+            label: s.name,
+            op: m.op === "mult" ? ("mult" as const) : ("add" as const),
+            value: m.delta,
+          })),
+        );
       toast.success(`Cast ${s.name}`, {
-        description: concentrating ? "Concentrating" : undefined,
+        description: applyMods
+          ? s.concentration
+            ? "On you · concentrating"
+            : "Bonuses applied"
+          : s.concentration
+            ? "On another · concentrating"
+            : "On another — no changes",
       });
-    else toast.warning(`${s.name} is already active`);
+    } else toast.warning(`${s.name} is already active`);
+  };
+
+  /** Cast, routing through the concentration-limit "drop" step if needed. */
+  const finalizeCast = (s: HomebrewSpell, applyMods: boolean) => {
+    if (s.concentration && concentrationCount(c.effects) >= max) {
+      setPrompt({ spell: s, stage: "drop", applyMods });
+      return;
+    }
+    doCast(s, applyMods);
+    setPrompt(null);
   };
 
   const cast = (s: HomebrewSpell) => {
-    if (isActive(s.name)) {
+    if (activeEffectFor(s.name)) {
       toast.warning(`${s.name} is already active`);
       return;
     }
-    // Concentration spells route through the dialog; everything else applies directly.
-    if (s.concentration) setPrompt({ spell: s, stage: "ask" });
-    else applySpellEffect(s, false);
+    // Spells with bonuses ask self vs. other; otherwise just register it.
+    if (hasMods(s)) setPrompt({ spell: s, stage: "self", applyMods: true });
+    else finalizeCast(s, false);
   };
 
-  // Concentration-dialog actions --------------------------------------------
-  const castUnconcentrated = () => {
-    if (!prompt) return;
-    applySpellEffect(prompt.spell, false);
-    setPrompt(null);
-  };
-
-  const castConcentrating = () => {
-    if (!prompt) return;
-    if (concentrationCount(c.effects) >= max) {
-      setPrompt({ ...prompt, stage: "drop" }); // at limit → choose what to drop
-      return;
+  /** End an active spell straight from the Spells tab (no trip to Buffs). */
+  const uncast = (s: HomebrewSpell) => {
+    const e = activeEffectFor(s.name);
+    if (e) {
+      removeEffect(c.id, e.id);
+      toast.success(`Ended ${s.name}`);
     }
-    applySpellEffect(prompt.spell, true);
-    setPrompt(null);
+  };
+
+  // Cast-dialog actions -----------------------------------------------------
+  const castOnSelf = () => {
+    if (prompt) finalizeCast(prompt.spell, true);
+  };
+
+  const castOnOther = () => {
+    if (!prompt) return;
+    // On someone else: only worth tracking if it's a concentration spell.
+    if (prompt.spell.concentration) finalizeCast(prompt.spell, false);
+    else {
+      toast.success(`Cast ${prompt.spell.name}`, {
+        description: "On another — no changes to your sheet",
+      });
+      setPrompt(null);
+    }
   };
 
   const dropAndCast = (effectId: string) => {
     if (!prompt) return;
     removeEffect(c.id, effectId);
-    applySpellEffect(prompt.spell, true);
+    doCast(prompt.spell, prompt.applyMods);
     setPrompt(null);
   };
 
@@ -174,7 +218,9 @@ export function SpellsTab({ c }: { c: Character }) {
                   <SpellCard
                     key={s.id}
                     spell={s}
+                    active={!!activeEffectFor(s.name)}
                     onCast={() => cast(s)}
+                    onUncast={() => uncast(s)}
                     onEdit={() => startEdit(s)}
                     onRemove={() => removeSpell(c.id, s.id)}
                   />
@@ -191,8 +237,8 @@ export function SpellsTab({ c }: { c: Character }) {
         max={max}
         activeConcentration={activeConcentration}
         onClose={() => setPrompt(null)}
-        onCastUnconcentrated={castUnconcentrated}
-        onCastConcentrating={castConcentrating}
+        onCastSelf={castOnSelf}
+        onCastOther={castOnOther}
         onDrop={dropAndCast}
       />
     </div>

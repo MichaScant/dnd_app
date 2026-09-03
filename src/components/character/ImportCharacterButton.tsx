@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { useStore } from "@/lib/store";
 import { importFromFile } from "@/lib/import";
+import { savePortrait } from "@/lib/portraitStore";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -35,9 +36,21 @@ export function ImportCharacterButton({
     setLoading(true);
     try {
       const result = await importFromFile(file);
-      importCharacter(result.character);
+      const id = importCharacter(result.character);
+      // An embedded portrait (e.g. from the Tintagel sheet) → IndexedDB.
+      if (result.portrait) {
+        await savePortrait(id, {
+          source: result.portrait,
+          cropped: result.portrait,
+        });
+      }
       toast.success(`Imported ${result.character.name ?? "character"}`);
-      setWarnings(result.warnings);
+      // Drop the "add a portrait" note when we actually imported one.
+      setWarnings(
+        result.portrait
+          ? result.warnings.filter((w) => !/portrait/i.test(w))
+          : result.warnings,
+      );
       onNavigate?.();
     } catch (err) {
       toast.error(

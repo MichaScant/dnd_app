@@ -1,5 +1,20 @@
-import { Character, InventoryItem, StatKey, STAT_KEYS } from "@/lib/types";
+import {
+  Character,
+  InventoryItem,
+  StatKey,
+  STAT_KEYS,
+  modifier,
+} from "@/lib/types";
 import { ImportResult, HOMEBREW_WARNINGS } from "./types";
+
+const ABILITY_BY_ABBR: Record<string, StatKey> = {
+  str: "str",
+  dex: "dex",
+  con: "con",
+  int: "int",
+  wis: "wis",
+  cha: "cha",
+};
 
 // ---------------------------------------------------------------------------
 // Field-name maps for the official WotC "5E_CharacterSheet_Fillable.pdf".
@@ -177,6 +192,20 @@ export async function parseFillablePdf(file: File): Promise<ImportResult> {
     .filter(Boolean)
     .join("\n\n");
 
+  // --- Spellcasting: ability + Save DC. Back-solve the base so the displayed
+  //     DC (base + prof + ability mod) matches the sheet even if homebrewed. ---
+  const profBonus = toNum(firstText("ProfBonus"), 2);
+  const spellAbility =
+    ABILITY_BY_ABBR[
+      firstText("SpellcastingAbility 2").trim().toLowerCase().slice(0, 3)
+    ];
+  const dcText = firstText("SpellSaveDC  2", "SpellSaveDC 2").trim();
+  const spellDcBase = dcText
+    ? toNum(dcText, 8) -
+      profBonus -
+      (spellAbility ? modifier(stats[spellAbility]) : 0)
+    : undefined;
+
   const character: Partial<Character> = {
     name: firstText("CharacterName", "PlayerName").trim() || "Imported Hero",
     race: firstText("Race ", "Race").trim(),
@@ -187,7 +216,9 @@ export async function parseFillablePdf(file: File): Promise<ImportResult> {
     speed: toNum(firstText("Speed"), 30),
     hp: toNum(firstText("HPCurrent", "HPMax"), 10),
     maxHp: toNum(firstText("HPMax"), 10),
-    proficiencyBonus: toNum(firstText("ProfBonus"), 2),
+    proficiencyBonus: profBonus,
+    spellAbility,
+    spellDcBase,
     stats,
     savingThrows,
     skillProficiencies,

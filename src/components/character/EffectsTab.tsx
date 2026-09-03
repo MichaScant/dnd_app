@@ -47,7 +47,7 @@ export function EffectsTab({ c }: { c: Character }) {
     setMods([]);
   };
 
-  const notifyApplied = (name: string, added: boolean) => {
+  const notifyApplied = (name: string, added: string | null) => {
     if (added) toast.success(`Applied ${name}`);
     else toast.warning(`${name} is already active`);
   };

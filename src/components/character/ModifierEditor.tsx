@@ -4,6 +4,7 @@ import {
   MOD_TARGET_LABELS,
   STAT_KEYS,
   STAT_LABELS,
+  StatKey,
 } from "@/lib/types";
 import { DraftMod, StatChoice, TARGET_OPTIONS } from "@/lib/modifiers";
 import { Button } from "@/components/ui/button";
@@ -43,6 +44,9 @@ export function ModifierEditor({
             next.stat = undefined;
             next.skill = undefined;
           }
+          // op/plusStat are target-specific — reset when the target changes.
+          next.op = undefined;
+          next.plusStat = undefined;
         }
         return next;
       }),
@@ -116,12 +120,62 @@ export function ModifierEditor({
                 </select>
               )}
 
+              {target === "ac" && (
+                <>
+                  <label className="flex items-center gap-1 text-xs text-muted-foreground select-none">
+                    <input
+                      type="checkbox"
+                      checked={m.op === "set"}
+                      onChange={(e) =>
+                        updateMod(i, { op: e.target.checked ? "set" : "add" })
+                      }
+                    />
+                    set
+                  </label>
+                  {m.op === "set" && (
+                    <select
+                      value={m.plusStat ?? ""}
+                      onChange={(e) =>
+                        updateMod(i, {
+                          plusStat: (e.target.value || undefined) as
+                            | StatKey
+                            | undefined,
+                        })
+                      }
+                      className="bg-input border border-border rounded-md px-2 py-1.5 text-sm"
+                    >
+                      <option value="">flat</option>
+                      {STAT_KEYS.map((k) => (
+                        <option key={k} value={k}>
+                          +{k.toUpperCase()}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </>
+              )}
+
+              {target === "speed" && (
+                <label className="flex items-center gap-1 text-xs text-muted-foreground select-none">
+                  <input
+                    type="checkbox"
+                    checked={m.op === "mult"}
+                    onChange={(e) =>
+                      updateMod(i, { op: e.target.checked ? "mult" : "add" })
+                    }
+                  />
+                  ×mult
+                </label>
+              )}
+
               <Input
                 type="number"
                 value={m.delta}
                 onChange={(e) => updateMod(i, { delta: +e.target.value || 0 })}
                 className="w-24 text-center"
-                placeholder="±"
+                placeholder={
+                  m.op === "set" ? "AC" : m.op === "mult" ? "×" : "±"
+                }
               />
               <Button
                 type="button"

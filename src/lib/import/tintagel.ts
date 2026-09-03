@@ -45,11 +45,44 @@ const toNum = (s: string, fallback: number): number => {
   return Number.isFinite(n) ? n : fallback;
 };
 
+/**
+ * Pull the character portrait out of the .xlsx (images live in xl/media/).
+ * The pasted portrait is by far the largest image; the tiny ones are template
+ * decoration, so we take the biggest and require a sane minimum size.
+ */
+async function extractPortrait(buf: Uint8Array): Promise<string | undefined> {
+  try {
+    const { unzipSync } = await import("fflate");
+    const files = unzipSync(buf);
+    let best: { data: Uint8Array; ext: string } | null = null;
+    for (const path of Object.keys(files)) {
+      if (!path.startsWith("xl/media/")) continue;
+      const data = files[path];
+      if (!best || data.length > best.data.length) {
+        best = { data, ext: (path.split(".").pop() ?? "png").toLowerCase() };
+      }
+    }
+    if (!best || best.data.length < 50000) return undefined; // decoration only
+    const mime =
+      best.ext === "jpg" || best.ext === "jpeg"
+        ? "image/jpeg"
+        : `image/${best.ext}`;
+    // Base64-encode in chunks (portable; avoids call-stack limits on big images).
+    let binary = "";
+    const chunk = 0x8000;
+    for (let i = 0; i < best.data.length; i += chunk) {
+      binary += String.fromCharCode(...best.data.subarray(i, i + chunk));
+    }
+    return `data:${mime};base64,${btoa(binary)}`;
+  } catch {
+    return undefined;
+  }
+}
+
 export async function parseTintagelXlsx(file: File): Promise<ImportResult> {
   const XLSX = await import("xlsx");
-  const wb: WorkBook = XLSX.read(new Uint8Array(await file.arrayBuffer()), {
-    type: "array",
-  });
+  const buf = new Uint8Array(await file.arrayBuffer());
+  const wb: WorkBook = XLSX.read(buf, { type: "array" });
 
   const cell = (sheet: string, addr: string): string => {
     const ws: WorkSheet | undefined = wb.Sheets[sheet];
@@ -112,6 +145,13 @@ export async function parseTintagelXlsx(file: File): Promise<ImportResult> {
   }
 
   const hpCur = toNum(cell(FRONT, HP_CUR_CELL), 10);
+  const profBonus = toNum(named("Prof"), 2);
+
+  // Spell Save DC: Tintagel exposes the final DC but not the casting ability,
+  // so fold everything past proficiency into the base (DC = base + prof).
+  const dcRaw = named("SpellDC");
+  const spellDcBase = dcRaw ? toNum(dcRaw, 8) - profBonus : undefined;
+
   const character: Partial<Character> = {
     name: cell(FRONT, NAME_CELL) || "Imported Hero",
     race: cell(FRONT, RACE_CELL),
@@ -120,12 +160,15 @@ export async function parseTintagelXlsx(file: File): Promise<ImportResult> {
     ac: toNum(named("AC"), 10),
     hp: hpCur,
     maxHp: toNum(cell(FRONT, HP_MAX_CELL), hpCur),
-    proficiencyBonus: toNum(named("Prof"), 2),
+    proficiencyBonus: profBonus,
+    spellDcBase,
     stats,
     savingThrows,
     skillProficiencies,
     skillExpertise,
   };
+
+  const portrait = await extractPortrait(buf);
 
   const warnings = [
     ...HOMEBREW_WARNINGS,
@@ -134,5 +177,5 @@ export async function parseTintagelXlsx(file: File): Promise<ImportResult> {
     "Verify the imported values against your sheet.",
   ];
 
-  return { character, warnings, source: "tintagel" };
+  return { character, warnings, source: "tintagel", portrait };
 }
