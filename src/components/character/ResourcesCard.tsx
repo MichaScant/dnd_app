@@ -101,7 +101,7 @@ function ResourceRow({
       <Input
         value={r.name}
         onChange={(e) => onChange({ name: e.target.value })}
-        className="font-display h-8 w-40"
+        className="font-display h-8 flex-1 min-w-[7rem]"
         aria-label="Resource name"
       />
 

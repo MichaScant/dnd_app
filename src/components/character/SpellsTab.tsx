@@ -5,6 +5,7 @@ import { useStore, concentrationCount } from "@/lib/store";
 import { SpellForm } from "@/components/character/SpellForm";
 import { SpellCard } from "@/components/character/SpellCard";
 import { SpellSlotTracker } from "@/components/character/SpellSlotTracker";
+import { PreparedSpellsCard } from "@/components/character/PreparedSpellsCard";
 import {
   ConcentrationDialog,
   CastPrompt,
@@ -27,9 +28,12 @@ const levelLabel = (lvl: number) => (lvl === 0 ? "Cantrips" : `Level ${lvl}`);
 export function SpellsTab({ c }: { c: Character }) {
   const {
     removeSpell,
+    updateSpell,
     addEffect,
     removeEffect,
     addSpeedModifiersForEffect,
+    addAdvantagesForEffect,
+    addJumpModifiersForEffect,
     addSpellSlotTier,
     updateSpellSlotTier,
     removeSpellSlotTier,
@@ -58,9 +62,15 @@ export function SpellsTab({ c }: { c: Character }) {
    *  counts, since you're the one concentrating). */
   const doCast = (s: HomebrewSpell, applyMods: boolean) => {
     const all = applyMods ? (s.modifiers ?? []) : [];
-    // Speed modifiers become rows on the Speed card; the rest live on the effect.
+    // Speed/Jump rows go to their calculators, advantages to the tracker;
+    // the rest live on the effect.
     const speedMods = all.filter((m) => m.target === "speed");
-    const otherMods = all.filter((m) => m.target !== "speed");
+    const jumpMods = all.filter((m) => m.target === "jump");
+    const advMods = all.filter((m) => m.target === "advantage");
+    const otherMods = all.filter(
+      (m) =>
+        m.target !== "speed" && m.target !== "jump" && m.target !== "advantage",
+    );
     const effectId = addEffect(c.id, {
       kind: "buff",
       name: s.name,
@@ -78,6 +88,28 @@ export function SpellsTab({ c }: { c: Character }) {
             label: s.name,
             op: m.op === "mult" ? ("mult" as const) : ("add" as const),
             value: m.delta,
+          })),
+        );
+      if (jumpMods.length)
+        addJumpModifiersForEffect(
+          c.id,
+          effectId,
+          jumpMods.map((m) => ({
+            label: s.name,
+            op: m.op === "mult" ? ("mult" as const) : ("add" as const),
+            value: m.delta,
+          })),
+        );
+      if (advMods.length)
+        addAdvantagesForEffect(
+          c.id,
+          effectId,
+          advMods.map((m) => ({
+            kind:
+              m.advantage === "disadvantage"
+                ? ("disadvantage" as const)
+                : ("advantage" as const),
+            roll: m.note ?? "",
           })),
         );
       toast.success(`Cast ${s.name}`, {
@@ -145,12 +177,61 @@ export function SpellsTab({ c }: { c: Character }) {
     setPrompt(null);
   };
 
-  // Render a section per level that has spells OR slot groups, so slots stay
-  // visible and editable even for tiers you haven't added spells to yet.
-  const spellsByLevel = new Map(byLevel(c.spells));
-  const levels = [
-    ...new Set([...spellsByLevel.keys(), ...spellSlots.map((t) => t.level)]),
+  // Cantrips stay separate (always available); level-1+ spells split into
+  // prepared / unprepared lists.
+  const cantrips = c.spells.filter((s) => s.level === 0);
+  const prepared = c.spells.filter((s) => s.level >= 1 && s.prepared);
+  const unprepared = c.spells.filter((s) => s.level >= 1 && !s.prepared);
+  // Levels to show slot trackers for: any with level-1+ spells or existing tiers.
+  const slotLevels = [
+    ...new Set([
+      ...c.spells.filter((s) => s.level >= 1).map((s) => s.level),
+      ...spellSlots.map((t) => t.level),
+    ]),
   ].sort((a, b) => a - b);
+
+  const renderCard = (s: HomebrewSpell) => (
+    <SpellCard
+      key={s.id}
+      spell={s}
+      active={!!activeEffectFor(s.name)}
+      onCast={() => cast(s)}
+      onUncast={() => uncast(s)}
+      onEdit={() => startEdit(s)}
+      onRemove={() => removeSpell(c.id, s.id)}
+      onTogglePrepared={() =>
+        updateSpell(c.id, s.id, { prepared: !s.prepared })
+      }
+    />
+  );
+
+  const renderList = (
+    title: string,
+    list: HomebrewSpell[],
+    emptyText: string,
+  ) => (
+    <section className="grimoire-card p-5">
+      <h4 className="font-display text-sm uppercase tracking-widest text-primary mb-3">
+        {title}
+      </h4>
+      {list.length === 0 ? (
+        <p className="text-sm text-muted-foreground italic">{emptyText}</p>
+      ) : (
+        <div className="space-y-4">
+          {byLevel(list).map(([lvl, spells]) => (
+            <div key={lvl}>
+              <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-2">
+                {levelLabel(lvl)}
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {spells.map(renderCard)}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  );
 
   return (
     <div className="space-y-6">
@@ -168,67 +249,84 @@ export function SpellsTab({ c }: { c: Character }) {
         onDone={() => setEditing(null)}
       />
 
-      {levels.length === 0 ? (
+      {c.spells.length === 0 && spellSlots.length === 0 ? (
         <div className="grimoire-card p-12 text-center text-muted-foreground italic">
           The spellbook is empty. Scribe your first incantation above.
         </div>
       ) : (
-        levels.map((lvl) => {
-          const spells = spellsByLevel.get(lvl) ?? [];
-          const tiers = spellSlots.filter((t) => t.level === lvl);
-          return (
-            <section key={lvl} className="grimoire-card p-5">
+        <>
+          <PreparedSpellsCard c={c} />
+
+          {slotLevels.length > 0 && (
+            <section className="grimoire-card p-5">
               <h4 className="font-display text-sm uppercase tracking-widest text-primary mb-3">
-                {levelLabel(lvl)}
+                Spell Slots
               </h4>
-              {/* Spell slots — cantrips (level 0) don't use them. A tier can
-                  hold slots for a different caster class, so allow several. */}
-              {lvl > 0 && (
-                <div className="space-y-2 mb-4">
-                  {tiers.map((t) => (
-                    <SpellSlotTracker
-                      key={t.id}
-                      level={lvl}
-                      total={t.total}
-                      used={t.used}
-                      type={t.type ?? ""}
-                      onChangeTotal={(n) =>
-                        updateSpellSlotTier(c.id, t.id, { total: n })
-                      }
-                      onChangeUsed={(n) =>
-                        updateSpellSlotTier(c.id, t.id, { used: n })
-                      }
-                      onChangeType={(ty) =>
-                        updateSpellSlotTier(c.id, t.id, { type: ty })
-                      }
-                      onRemove={() => removeSpellSlotTier(c.id, t.id)}
-                    />
-                  ))}
-                  <button
-                    type="button"
-                    onClick={() => addSpellSlotTier(c.id, lvl)}
-                    className="text-[11px] flex items-center gap-1 text-muted-foreground hover:text-primary border border-dashed border-border rounded-md px-2 py-1"
-                  >
-                    <Plus className="h-3 w-3" /> Add slots
-                  </button>
-                </div>
-              )}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {spells.map((s) => (
-                  <SpellCard
-                    key={s.id}
-                    spell={s}
-                    active={!!activeEffectFor(s.name)}
-                    onCast={() => cast(s)}
-                    onUncast={() => uncast(s)}
-                    onEdit={() => startEdit(s)}
-                    onRemove={() => removeSpell(c.id, s.id)}
-                  />
-                ))}
+              <div className="space-y-4">
+                {slotLevels.map((lvl) => {
+                  const tiers = spellSlots.filter((t) => t.level === lvl);
+                  return (
+                    <div key={lvl}>
+                      <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1.5">
+                        {levelLabel(lvl)}
+                      </div>
+                      <div className="space-y-2">
+                        {tiers.map((t) => (
+                          <SpellSlotTracker
+                            key={t.id}
+                            level={lvl}
+                            total={t.total}
+                            used={t.used}
+                            type={t.type ?? ""}
+                            onChangeTotal={(n) =>
+                              updateSpellSlotTier(c.id, t.id, { total: n })
+                            }
+                            onChangeUsed={(n) =>
+                              updateSpellSlotTier(c.id, t.id, { used: n })
+                            }
+                            onChangeType={(ty) =>
+                              updateSpellSlotTier(c.id, t.id, { type: ty })
+                            }
+                            onRemove={() => removeSpellSlotTier(c.id, t.id)}
+                          />
+                        ))}
+                        <button
+                          type="button"
+                          onClick={() => addSpellSlotTier(c.id, lvl)}
+                          className="text-[11px] flex items-center gap-1 text-muted-foreground hover:text-primary border border-dashed border-border rounded-md px-2 py-1"
+                        >
+                          <Plus className="h-3 w-3" /> Add slots
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </section>
-          );
-        })
+          )}
+
+          {cantrips.length > 0 && (
+            <section className="grimoire-card p-5">
+              <h4 className="font-display text-sm uppercase tracking-widest text-primary mb-3">
+                Cantrips
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {cantrips.map(renderCard)}
+              </div>
+            </section>
+          )}
+
+          {renderList(
+            `Prepared (${prepared.length})`,
+            prepared,
+            "No spells prepared — tap the bookmark on a spell to prepare it.",
+          )}
+          {renderList(
+            `Unprepared (${unprepared.length})`,
+            unprepared,
+            "No unprepared spells.",
+          )}
+        </>
       )}
 
       <ConcentrationDialog

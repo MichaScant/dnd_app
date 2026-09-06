@@ -21,7 +21,10 @@ export const TARGET_OPTIONS: ModTarget[] = [
   "save",
   "skill",
   "extraAction",
+  "bonusAction",
   "speed",
+  "jump",
+  "advantage",
 ];
 
 /** Expand any { stat: "all" } draft into one entry per ability score. */
@@ -42,6 +45,7 @@ export function expandMods(mods: DraftMod[]): StatModifier[] {
         note: m.note,
         op: m.op,
         plusStat: m.plusStat,
+        advantage: m.advantage,
       });
     }
   }
@@ -73,7 +77,13 @@ export function modifierLabel(m: StatModifier): string {
       return `DMG ${sign}`;
     case "extraAction":
       return `Action ${sign}`;
+    case "bonusAction":
+      return `Bonus Action ${sign}`;
     case "speed":
       return m.op === "mult" ? `Speed ×${m.delta}` : `Speed ${sign}`;
+    case "jump":
+      return m.op === "mult" ? `Jump ×${m.delta}` : `Jump ${sign}`;
+    case "advantage":
+      return `${m.advantage === "disadvantage" ? "Disadv" : "Adv"}: ${m.note || "roll"}`;
   }
 }

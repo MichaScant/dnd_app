@@ -1,7 +1,7 @@
 import { HomebrewSpell } from "@/lib/types";
 import { ModifierChips } from "@/components/character/ModifierChips";
 import { Button } from "@/components/ui/button";
-import { Trash2, Wand2, Brain, Pencil, X } from "lucide-react";
+import { Trash2, Wand2, Brain, Pencil, X, BookMarked } from "lucide-react";
 
 /** A single spell in the spellbook: stats, description, and a Cast action. */
 export function SpellCard({
@@ -11,6 +11,7 @@ export function SpellCard({
   onUncast,
   onEdit,
   onRemove,
+  onTogglePrepared,
 }: {
   spell: HomebrewSpell;
   active: boolean;
@@ -18,6 +19,7 @@ export function SpellCard({
   onUncast: () => void;
   onEdit: () => void;
   onRemove: () => void;
+  onTogglePrepared: () => void;
 }) {
   const hasMods = !!spell.modifiers?.length;
   // Only spells that actually do something on cast (a buff or concentration).
@@ -40,6 +42,22 @@ export function SpellCard({
           </div>
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
+          {spell.level >= 1 && (
+            <button
+              onClick={onTogglePrepared}
+              className={
+                spell.prepared
+                  ? "text-primary"
+                  : "text-muted-foreground hover:text-primary"
+              }
+              aria-label={spell.prepared ? "Unprepare spell" : "Prepare spell"}
+              title={
+                spell.prepared ? "Prepared — click to unprepare" : "Prepare"
+              }
+            >
+              <BookMarked className="h-4 w-4" />
+            </button>
+          )}
           <button
             onClick={onEdit}
             className="text-muted-foreground hover:text-primary"

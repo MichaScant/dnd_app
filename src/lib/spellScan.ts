@@ -106,10 +106,48 @@ export function detectSpellModifiers(description: string): StatModifier[] {
   );
   if (attack) mods.push({ target: "weaponAttack", delta: Number(attack[1]) });
 
+  // --- Jump distance: a multiplier word (Jump spell "tripled") or a number --
+  const jumpMultWords: Record<string, number> = {
+    doubled: 2,
+    tripled: 3,
+    quadrupled: 4,
+  };
+  const jumpMult = first(/jump[^.]*?\b(doubled|tripled|quadrupled)\b/i, text);
+  if (jumpMult)
+    mods.push({
+      target: "jump",
+      op: "mult",
+      delta: jumpMultWords[jumpMult[1].toLowerCase()] ?? 2,
+    });
+  const jumpAdd = first(
+    /jump[^.]*?(?:increases?|extended|extend|gains?)\s+(?:by\s+)?(\d+)/i,
+    text,
+  );
+  if (jumpAdd) mods.push({ target: "jump", delta: Number(jumpAdd[1]) });
+
+  // --- Advantage / disadvantage on a roll (Haste's Dex saves, etc.) --------
+  // \b before "advantage" avoids matching inside "disadvantage".
+  const adv = first(/\badvantage on ([^.,;]+)/i, text);
+  if (adv)
+    mods.push({
+      target: "advantage",
+      advantage: "advantage",
+      delta: 0,
+      note: adv[1].trim(),
+    });
+  const dis = first(/\bdisadvantage on ([^.,;]+)/i, text);
+  if (dis)
+    mods.push({
+      target: "advantage",
+      advantage: "disadvantage",
+      delta: 0,
+      note: dis[1].trim(),
+    });
+
   // De-dup identical entries.
   const seen = new Set<string>();
   return mods.filter((m) => {
-    const key = `${m.target}|${m.stat ?? ""}|${m.op ?? "add"}|${m.plusStat ?? ""}|${m.delta}`;
+    const key = `${m.target}|${m.stat ?? ""}|${m.op ?? "add"}|${m.plusStat ?? ""}|${m.delta}|${m.advantage ?? ""}|${m.note ?? ""}`;
     if (seen.has(key)) return false;
     seen.add(key);
     return true;

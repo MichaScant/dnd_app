@@ -18,6 +18,7 @@ import {
   concentrationCount,
   computeEffectiveSpeed,
   effectSpeedMult,
+  effectiveJump,
   effectiveAc,
 } from "@/lib/store";
 import { Input } from "@/components/ui/input";
@@ -27,11 +28,21 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { EquipmentBox } from "@/components/character/EquipmentBox";
 import { ResourcesCard } from "@/components/character/ResourcesCard";
 import { SpeedCard } from "@/components/character/SpeedCard";
+import { JumpCard } from "@/components/character/JumpCard";
 import { SpellcastingCard } from "@/components/character/SpellcastingCard";
 import { ActiveEffectsCard } from "@/components/character/ActiveEffectsCard";
+import { AdvantageCard } from "@/components/character/AdvantageCard";
 import { CharacterPortrait } from "@/components/character/CharacterPortrait";
 import { DEFAULT_SKILLS } from "@/lib/types";
-import { Heart, Shield, Footprints, Sparkles, Star, Zap } from "lucide-react";
+import {
+  Heart,
+  Shield,
+  Footprints,
+  Sparkles,
+  Star,
+  Zap,
+  ArrowUp,
+} from "lucide-react";
 
 export function OverviewTab({ c }: { c: Character }) {
   const { update, setStat, toggleSave, cycleSkill } = useStore();
@@ -53,6 +64,11 @@ export function OverviewTab({ c }: { c: Character }) {
     speedPenalty,
     sumEffectBonus(allEffects, "speed"),
     effectSpeedMult(allEffects),
+  );
+  const effJump = effectiveJump(
+    c.jumpBase ?? effective.str,
+    c.jumpModifiers ?? [],
+    allEffects,
   );
 
   return (
@@ -187,6 +203,12 @@ export function OverviewTab({ c }: { c: Character }) {
             )}
           </div>
         </VitalCard>
+        <VitalCard icon={<ArrowUp className="h-4 w-4" />} label="Jump">
+          <div className="text-center text-2xl font-display h-12 flex items-center justify-center">
+            {effJump}
+            <span className="text-xs text-muted-foreground ml-1">ft</span>
+          </div>
+        </VitalCard>
         <VitalCard
           icon={<Sparkles className="h-4 w-4" />}
           label="Active Effects"
@@ -204,6 +226,21 @@ export function OverviewTab({ c }: { c: Character }) {
                 {1 + extraActions}
                 <span className="text-xs text-muted-foreground ml-1.5">
                   ({extraActions > 0 ? `+${extraActions}` : extraActions})
+                </span>
+              </div>
+            </VitalCard>
+          );
+        })()}
+        {(() => {
+          const bonusActions = sumEffectBonus(allEffects, "bonusAction");
+          // Everyone has 1 bonus action; only surface it when boosted past 1.
+          if (bonusActions <= 0) return null;
+          return (
+            <VitalCard icon={<Zap className="h-4 w-4" />} label="Bonus Actions">
+              <div className="text-2xl font-display h-12 flex items-center justify-center text-primary">
+                {1 + bonusActions}
+                <span className="text-xs text-muted-foreground ml-1.5">
+                  (+{bonusActions})
                 </span>
               </div>
             </VitalCard>
@@ -263,8 +300,14 @@ export function OverviewTab({ c }: { c: Character }) {
       {/* Speed: base + modifier calculator */}
       <SpeedCard c={c} speedPenalty={speedPenalty} />
 
+      {/* Jump distance */}
+      <JumpCard c={c} />
+
       {/* Custom campaign resources (mana, ki, …) */}
       <ResourcesCard c={c} />
+
+      {/* Advantage / disadvantage tracker */}
+      <AdvantageCard c={c} />
 
       {/* Saving Throws + Skills */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

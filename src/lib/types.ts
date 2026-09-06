@@ -76,6 +76,14 @@ export interface SpeedModifier {
   source?: string; // effect id when injected by a cast spell (auto-removed on end)
 }
 
+/** An advantage/disadvantage the character has on some roll (tracking only). */
+export interface AdvantageEntry {
+  id: string;
+  kind: "advantage" | "disadvantage";
+  roll: string; // what it applies to, e.g. "Dexterity saving throws"
+  source?: string; // effect id when injected by a cast spell (auto-removed on end)
+}
+
 /**
  * A custom, campaign-specific resource pool shown on the front sheet — mana,
  * ki, grit, sorcery points, item charges, etc. `max` undefined = uncapped.
@@ -155,7 +163,10 @@ export type ModTarget =
   | "save"
   | "skill"
   | "extraAction"
-  | "speed";
+  | "bonusAction"
+  | "speed"
+  | "jump"
+  | "advantage";
 
 export const MOD_TARGET_LABELS: Record<ModTarget, string> = {
   stat: "Ability Score",
@@ -167,7 +178,10 @@ export const MOD_TARGET_LABELS: Record<ModTarget, string> = {
   save: "Saving Throw",
   skill: "Skill Check",
   extraAction: "Extra Action",
+  bonusAction: "Bonus Action",
   speed: "Speed",
+  jump: "Jump",
+  advantage: "Advantage",
 };
 
 export interface StatModifier {
@@ -178,6 +192,7 @@ export interface StatModifier {
   note?: string;
   op?: "add" | "set" | "mult"; // "set" overrides AC; "mult" multiplies speed; default "add"
   plusStat?: StatKey; // for op="set" on AC: value = delta + modifier(plusStat), e.g. Mage Armor 13+DEX
+  advantage?: "advantage" | "disadvantage"; // for target="advantage"; note holds what it applies to
 }
 
 export const SKILL_ABILITY: Record<string, StatKey> = {
@@ -237,12 +252,16 @@ export interface Character {
   proficiencyBonus: number;
   spellAbility?: StatKey; // spellcasting ability for Save DC / attack (optional)
   spellDcBase?: number; // base for Spell Save DC (default 8)
+  jumpBase?: number; // base long-jump distance (default = Strength score)
+  preparedFormula?: string; // custom max-prepared formula; blank = standard 5e
   concentrationMax: number; // max simultaneous concentration spells (default 1)
   classes: HomebrewClass[];
   spells: HomebrewSpell[];
   spellSlots: SpellSlotTier[]; // slot groups across tiers (see SpellSlotTier)
   resources: Resource[]; // custom campaign resource pools
   speedModifiers: SpeedModifier[]; // bonuses feeding the Speed calculator
+  jumpModifiers: SpeedModifier[]; // bonuses feeding the Jump calculator
+  advantages: AdvantageEntry[]; // advantage/disadvantage tracker
   abilities: HomebrewAbility[];
   inventory: InventoryItem[];
   equipment: Record<string, string>; // slot id -> equipped item id
@@ -290,6 +309,8 @@ export const createCharacter = (name = "New Adventurer"): Character => ({
   spellSlots: [],
   resources: [],
   speedModifiers: [],
+  jumpModifiers: [],
+  advantages: [],
   abilities: [],
   inventory: [],
   equipment: {},

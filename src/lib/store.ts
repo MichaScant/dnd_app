@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { deletePortrait } from "./portraitStore";
 import {
+  AdvantageEntry,
   Character,
   createCharacter,
   Effect,
@@ -40,6 +41,16 @@ interface State {
     effectId: string,
     rows: { label: string; op: "add" | "mult"; value: number }[],
   ) => void;
+  addAdvantagesForEffect: (
+    id: string,
+    effectId: string,
+    rows: { kind: "advantage" | "disadvantage"; roll: string }[],
+  ) => void;
+  addJumpModifiersForEffect: (
+    id: string,
+    effectId: string,
+    rows: { label: string; op: "add" | "mult"; value: number }[],
+  ) => void;
   saveEffectToLibrary: (e: Omit<Effect, "id">) => void;
   removeSavedEffect: (sid: string) => void;
   addSpell: (id: string, s: Omit<HomebrewSpell, "id">) => void;
@@ -69,6 +80,21 @@ interface State {
   ) => void;
   removeSpeedModifier: (id: string, mid: string) => void;
   moveSpeedModifier: (id: string, mid: string, dir: -1 | 1) => void;
+  addJumpModifier: (id: string) => void;
+  updateJumpModifier: (
+    id: string,
+    mid: string,
+    patch: Partial<Omit<SpeedModifier, "id">>,
+  ) => void;
+  removeJumpModifier: (id: string, mid: string) => void;
+  moveJumpModifier: (id: string, mid: string, dir: -1 | 1) => void;
+  addAdvantage: (id: string) => void;
+  updateAdvantage: (
+    id: string,
+    aid: string,
+    patch: Partial<Omit<AdvantageEntry, "id">>,
+  ) => void;
+  removeAdvantage: (id: string, aid: string) => void;
   addItem: (id: string, item: Omit<InventoryItem, "id">) => boolean;
   removeItem: (id: string, iid: string) => void;
   updateItem: (id: string, iid: string, patch: Partial<InventoryItem>) => void;
@@ -243,10 +269,14 @@ export const useStore = create<State>()(
           characters: patchChar(s.characters, id, (c) => ({
             ...c,
             effects: c.effects.filter((e) => e.id !== eid),
-            // Drop any Speed-card rows this effect (a cast spell) injected.
+            // Drop any Speed/Jump rows & advantages this effect (a cast spell) injected.
             speedModifiers: (c.speedModifiers ?? []).filter(
               (m) => m.source !== eid,
             ),
+            jumpModifiers: (c.jumpModifiers ?? []).filter(
+              (m) => m.source !== eid,
+            ),
+            advantages: (c.advantages ?? []).filter((a) => a.source !== eid),
           })),
         })),
       addSpeedModifiersForEffect: (id, effectId, rows) =>
@@ -255,6 +285,37 @@ export const useStore = create<State>()(
             ...c,
             speedModifiers: [
               ...(c.speedModifiers ?? []),
+              ...rows.map((r) => ({
+                id: crypto.randomUUID(),
+                label: r.label,
+                op: r.op,
+                value: r.value,
+                source: effectId,
+              })),
+            ],
+          })),
+        })),
+      addAdvantagesForEffect: (id, effectId, rows) =>
+        set((s) => ({
+          characters: patchChar(s.characters, id, (c) => ({
+            ...c,
+            advantages: [
+              ...(c.advantages ?? []),
+              ...rows.map((r) => ({
+                id: crypto.randomUUID(),
+                kind: r.kind,
+                roll: r.roll,
+                source: effectId,
+              })),
+            ],
+          })),
+        })),
+      addJumpModifiersForEffect: (id, effectId, rows) =>
+        set((s) => ({
+          characters: patchChar(s.characters, id, (c) => ({
+            ...c,
+            jumpModifiers: [
+              ...(c.jumpModifiers ?? []),
               ...rows.map((r) => ({
                 id: crypto.randomUUID(),
                 label: r.label,
@@ -405,6 +466,69 @@ export const useStore = create<State>()(
             [mods[i], mods[j]] = [mods[j], mods[i]];
             return { ...c, speedModifiers: mods };
           }),
+        })),
+      addJumpModifier: (id) =>
+        set((s) => ({
+          characters: patchChar(s.characters, id, (c) => ({
+            ...c,
+            jumpModifiers: [
+              ...(c.jumpModifiers ?? []),
+              { id: crypto.randomUUID(), label: "", op: "add", value: 0 },
+            ],
+          })),
+        })),
+      updateJumpModifier: (id, mid, patch) =>
+        set((s) => ({
+          characters: patchChar(s.characters, id, (c) => ({
+            ...c,
+            jumpModifiers: (c.jumpModifiers ?? []).map((m) =>
+              m.id === mid ? { ...m, ...patch } : m,
+            ),
+          })),
+        })),
+      removeJumpModifier: (id, mid) =>
+        set((s) => ({
+          characters: patchChar(s.characters, id, (c) => ({
+            ...c,
+            jumpModifiers: (c.jumpModifiers ?? []).filter((m) => m.id !== mid),
+          })),
+        })),
+      moveJumpModifier: (id, mid, dir) =>
+        set((s) => ({
+          characters: patchChar(s.characters, id, (c) => {
+            const mods = [...(c.jumpModifiers ?? [])];
+            const i = mods.findIndex((m) => m.id === mid);
+            const j = i + dir;
+            if (i < 0 || j < 0 || j >= mods.length) return c;
+            [mods[i], mods[j]] = [mods[j], mods[i]];
+            return { ...c, jumpModifiers: mods };
+          }),
+        })),
+      addAdvantage: (id) =>
+        set((s) => ({
+          characters: patchChar(s.characters, id, (c) => ({
+            ...c,
+            advantages: [
+              ...(c.advantages ?? []),
+              { id: crypto.randomUUID(), kind: "advantage", roll: "" },
+            ],
+          })),
+        })),
+      updateAdvantage: (id, aid, patch) =>
+        set((s) => ({
+          characters: patchChar(s.characters, id, (c) => ({
+            ...c,
+            advantages: (c.advantages ?? []).map((a) =>
+              a.id === aid ? { ...a, ...patch } : a,
+            ),
+          })),
+        })),
+      removeAdvantage: (id, aid) =>
+        set((s) => ({
+          characters: patchChar(s.characters, id, (c) => ({
+            ...c,
+            advantages: (c.advantages ?? []).filter((a) => a.id !== aid),
+          })),
         })),
       addItem: (id, item) => {
         // Refuse to add the same item twice (matched by name, case-insensitive).
@@ -593,7 +717,9 @@ export const sumEffectBonus = (
     | "weaponAttack"
     | "damage"
     | "extraAction"
-    | "speed",
+    | "bonusAction"
+    | "speed"
+    | "jump",
 ): number => {
   let total = 0;
   for (const e of effects) {
@@ -657,6 +783,32 @@ export const effectSpeedMult = (effects: Effect[]): number => {
       if (m.target === "speed" && m.op === "mult") mult *= m.delta || 1;
   return mult;
 };
+
+/** Product of jump ×multipliers from active spells/gear (e.g. Jump spell ×3). */
+export const effectJumpMult = (effects: Effect[]): number => {
+  let mult = 1;
+  for (const e of effects)
+    for (const m of e.modifiers)
+      if (m.target === "jump" && m.op === "mult") mult *= m.delta || 1;
+  return mult;
+};
+
+/**
+ * Effective long-jump distance: (base + flat jump bonuses from spells/gear)
+ * × their multipliers, then the manual Jump-card modifier rows in order.
+ */
+export const effectiveJump = (
+  base: number,
+  modifiers: SpeedModifier[],
+  effects: Effect[],
+): number =>
+  computeEffectiveSpeed(
+    base,
+    modifiers,
+    0,
+    sumEffectBonus(effects, "jump"),
+    effectJumpMult(effects),
+  );
 
 /**
  * Effective walking speed: (base − armor penalty + flat spell/gear bonuses)

@@ -20,7 +20,14 @@ import {
   DialogDescription,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { BookPlus, Search, Brain, Check, ScrollText } from "lucide-react";
+import {
+  BookPlus,
+  Search,
+  Brain,
+  Check,
+  ScrollText,
+  BookMarked,
+} from "lucide-react";
 
 const levelLabel = (lvl: number) => (lvl === 0 ? "Cantrips" : `Level ${lvl}`);
 
@@ -46,13 +53,17 @@ export function SrdSpellPicker({ c }: { c: Character }) {
 
   const total = groups.reduce((n, [, list]) => n + list.length, 0);
 
-  const add = (s: SrdSpell) => {
+  const add = (s: SrdSpell, prepared = false) => {
     if (existing.has(s.name.trim().toLowerCase())) {
       toast.warning(`${s.name} is already in your spellbook`);
       return;
     }
-    addSpell(c.id, toHomebrewSpell(s));
-    toast.success(`Added ${s.name}`, { description: levelLabel(s.level) });
+    addSpell(c.id, { ...toHomebrewSpell(s), prepared });
+    toast.success(`Added ${s.name}`, {
+      description: prepared
+        ? `${levelLabel(s.level)} · prepared`
+        : levelLabel(s.level),
+    });
   };
 
   return (
@@ -139,21 +150,35 @@ export function SrdSpellPicker({ c }: { c: Character }) {
                             {s.school} · {s.castingTime} · {s.range}
                           </div>
                         </div>
-                        <Button
-                          size="sm"
-                          variant={added ? "ghost" : "secondary"}
-                          disabled={added}
-                          onClick={() => add(s)}
-                          className="shrink-0"
-                        >
+                        <div className="flex items-center gap-1.5 shrink-0">
                           {added ? (
-                            <>
+                            <Button size="sm" variant="ghost" disabled>
                               <Check className="h-3.5 w-3.5 mr-1" /> Added
-                            </>
+                            </Button>
                           ) : (
-                            "Add"
+                            <>
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                onClick={() => add(s)}
+                              >
+                                Add
+                              </Button>
+                              {/* Cantrips are always available — can't be prepared. */}
+                              {s.level >= 1 && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => add(s, true)}
+                                  title="Add to spellbook and mark prepared"
+                                >
+                                  <BookMarked className="h-3.5 w-3.5 mr-1" />{" "}
+                                  Prepare
+                                </Button>
+                              )}
+                            </>
                           )}
-                        </Button>
+                        </div>
                       </div>
                     );
                   })}

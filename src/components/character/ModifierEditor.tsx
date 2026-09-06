@@ -47,6 +47,10 @@ export function ModifierEditor({
           // op/plusStat are target-specific — reset when the target changes.
           next.op = undefined;
           next.plusStat = undefined;
+          next.advantage =
+            patch.target === "advantage"
+              ? (next.advantage ?? "advantage")
+              : undefined;
         }
         return next;
       }),
@@ -155,7 +159,7 @@ export function ModifierEditor({
                 </>
               )}
 
-              {target === "speed" && (
+              {(target === "speed" || target === "jump") && (
                 <label className="flex items-center gap-1 text-xs text-muted-foreground select-none">
                   <input
                     type="checkbox"
@@ -168,15 +172,44 @@ export function ModifierEditor({
                 </label>
               )}
 
-              <Input
-                type="number"
-                value={m.delta}
-                onChange={(e) => updateMod(i, { delta: +e.target.value || 0 })}
-                className="w-24 text-center"
-                placeholder={
-                  m.op === "set" ? "AC" : m.op === "mult" ? "×" : "±"
-                }
-              />
+              {target === "advantage" && (
+                <>
+                  <select
+                    value={m.advantage ?? "advantage"}
+                    onChange={(e) =>
+                      updateMod(i, {
+                        advantage: e.target.value as
+                          | "advantage"
+                          | "disadvantage",
+                      })
+                    }
+                    className="bg-input border border-border rounded-md px-2 py-1.5 text-sm"
+                  >
+                    <option value="advantage">Advantage</option>
+                    <option value="disadvantage">Disadvantage</option>
+                  </select>
+                  <Input
+                    value={m.note ?? ""}
+                    onChange={(e) => updateMod(i, { note: e.target.value })}
+                    placeholder="on… (Dex saves, attacks, Stealth)"
+                    className="flex-1 min-w-[9rem]"
+                  />
+                </>
+              )}
+
+              {target !== "advantage" && (
+                <Input
+                  type="number"
+                  value={m.delta}
+                  onChange={(e) =>
+                    updateMod(i, { delta: +e.target.value || 0 })
+                  }
+                  className="w-24 text-center"
+                  placeholder={
+                    m.op === "set" ? "AC" : m.op === "mult" ? "×" : "±"
+                  }
+                />
+              )}
               <Button
                 type="button"
                 size="icon"
