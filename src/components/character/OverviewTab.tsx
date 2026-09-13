@@ -28,6 +28,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { EquipmentBox } from "@/components/character/EquipmentBox";
 import { ResourcesCard } from "@/components/character/ResourcesCard";
 import { SpeedCard } from "@/components/character/SpeedCard";
+import { CollapsibleCard } from "@/components/character/CollapsibleCard";
 import { JumpCard } from "@/components/character/JumpCard";
 import { SpellcastingCard } from "@/components/character/SpellcastingCard";
 import { ActiveEffectsCard } from "@/components/character/ActiveEffectsCard";
@@ -249,8 +250,7 @@ export function OverviewTab({ c }: { c: Character }) {
       </section>
 
       {/* Stats */}
-      <section className="grimoire-card p-6">
-        <h3 className="font-display text-lg mb-1">Ability Scores</h3>
+      <CollapsibleCard storageId="ability-scores" title="Ability Scores">
         <p className="text-xs text-muted-foreground mb-4">
           Base values; buffs, debuffs, and equipped gear apply automatically.
         </p>
@@ -289,7 +289,7 @@ export function OverviewTab({ c }: { c: Character }) {
             );
           })}
         </div>
-      </section>
+      </CollapsibleCard>
 
       {/* Spellcasting: Save DC & attack */}
       <SpellcastingCard c={c} />
@@ -311,8 +311,7 @@ export function OverviewTab({ c }: { c: Character }) {
 
       {/* Saving Throws + Skills */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <section className="grimoire-card p-6">
-          <h3 className="font-display text-lg mb-4">Saving Throws</h3>
+        <CollapsibleCard storageId="saving-throws" title="Saving Throws">
           <div className="space-y-2">
             {STAT_KEYS.map((k) => {
               const mod =
@@ -336,10 +335,9 @@ export function OverviewTab({ c }: { c: Character }) {
               );
             })}
           </div>
-        </section>
+        </CollapsibleCard>
 
-        <section className="grimoire-card p-6">
-          <h3 className="font-display text-lg mb-1">Skill Proficiencies</h3>
+        <CollapsibleCard storageId="skills" title="Skill Proficiencies">
           <p className="text-[11px] text-muted-foreground mb-3">
             Click to cycle: none → proficient → expertise.
           </p>
@@ -397,20 +395,19 @@ export function OverviewTab({ c }: { c: Character }) {
               );
             })}
           </div>
-        </section>
+        </CollapsibleCard>
       </div>
 
       <EquipmentBox c={c} />
 
-      <section className="grimoire-card p-6">
-        <h3 className="font-display text-lg mb-3">Notes & Backstory</h3>
+      <CollapsibleCard storageId="notes" title="Notes & Backstory">
         <Textarea
           rows={6}
           value={c.notes}
           onChange={(e) => update(c.id, { notes: e.target.value })}
           placeholder="Born under a blood moon…"
         />
-      </section>
+      </CollapsibleCard>
     </div>
   );
 }

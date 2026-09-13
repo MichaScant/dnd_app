@@ -8,6 +8,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { BookCheck } from "lucide-react";
+import { CollapsibleCard } from "@/components/character/CollapsibleCard";
 
 /**
  * Prepared-spell counter vs. maximum. Default max is the standard 5e
@@ -24,14 +25,20 @@ export function PreparedSpellsCard({ c }: { c: Character }) {
     ? evalPreparedFormula(formula, preparedVars(c, stats))
     : null;
   const max = usingCustom ? (custom ?? 0) : standard.total;
-  const count = c.spells.filter((s) => s.prepared && s.level >= 1).length;
+  const count = c.spells.filter(
+    (s) => s.prepared && s.level >= 1 && !s.resourceId,
+  ).length;
   const over = max > 0 && count > max;
 
   return (
-    <section className="grimoire-card p-6">
-      <h3 className="font-display text-lg mb-1 flex items-center gap-2">
-        <BookCheck className="h-4 w-4 text-primary" /> Prepared Spells
-      </h3>
+    <CollapsibleCard
+      storageId="prepared-spells"
+      title={
+        <>
+          <BookCheck className="h-4 w-4 text-primary" /> Prepared Spells
+        </>
+      }
+    >
       <p className="text-xs text-muted-foreground mb-4">
         How many level-1+ spells you have prepared vs. your maximum. Leave the
         formula blank for the standard 5e calculation (multiclass-aware).
@@ -83,6 +90,6 @@ export function PreparedSpellsCard({ c }: { c: Character }) {
             ))}
         </div>
       </div>
-    </section>
+    </CollapsibleCard>
   );
 }

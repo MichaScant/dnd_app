@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Gauge, Plus, Minus, Trash2, RotateCcw } from "lucide-react";
+import { CollapsibleCard } from "@/components/character/CollapsibleCard";
 
 /**
  * Front-sheet panel for custom campaign resources (mana, ki, grit, charges…).
@@ -30,10 +31,14 @@ export function ResourcesCard({ c }: { c: Character }) {
   };
 
   return (
-    <section className="grimoire-card p-6">
-      <h3 className="font-display text-lg mb-1 flex items-center gap-2">
-        <Gauge className="h-4 w-4 text-primary" /> Resources
-      </h3>
+    <CollapsibleCard
+      storageId="resources"
+      title={
+        <>
+          <Gauge className="h-4 w-4 text-primary" /> Resources
+        </>
+      }
+    >
       <p className="text-xs text-muted-foreground mb-4">
         Track resources your campaign uses
       </p>
@@ -80,7 +85,7 @@ export function ResourcesCard({ c }: { c: Character }) {
           <Plus className="h-4 w-4 mr-1.5" /> Add
         </Button>
       </div>
-    </section>
+    </CollapsibleCard>
   );
 }
 

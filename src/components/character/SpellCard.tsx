@@ -1,7 +1,15 @@
 import { HomebrewSpell } from "@/lib/types";
 import { ModifierChips } from "@/components/character/ModifierChips";
 import { Button } from "@/components/ui/button";
-import { Trash2, Wand2, Brain, Pencil, X, BookMarked } from "lucide-react";
+import {
+  Trash2,
+  Wand2,
+  Brain,
+  Pencil,
+  X,
+  BookMarked,
+  Flame,
+} from "lucide-react";
 
 /** A single spell in the spellbook: stats, description, and a Cast action. */
 export function SpellCard({
@@ -12,6 +20,7 @@ export function SpellCard({
   onEdit,
   onRemove,
   onTogglePrepared,
+  costLabel,
 }: {
   spell: HomebrewSpell;
   active: boolean;
@@ -20,10 +29,11 @@ export function SpellCard({
   onEdit: () => void;
   onRemove: () => void;
   onTogglePrepared: () => void;
+  costLabel?: string; // resource name for the spell's casting cost, if any
 }) {
   const hasMods = !!spell.modifiers?.length;
-  // Only spells that actually do something on cast (a buff or concentration).
-  const castable = hasMods || !!spell.concentration;
+  // Spells that do something on cast: a buff, concentration, or a resource cost.
+  const castable = hasMods || !!spell.concentration || !!spell.resourceCost;
 
   return (
     <div className="border border-border rounded-md p-3 bg-background/40">
@@ -36,13 +46,19 @@ export function SpellCard({
                 <Brain className="h-3 w-3" /> Conc.
               </span>
             )}
+            {!!spell.resourceCost && (
+              <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded border border-amber-500/50 text-amber-500 flex items-center gap-1">
+                <Flame className="h-3 w-3" /> {spell.resourceCost}
+                {costLabel ? ` ${costLabel}` : ""}
+              </span>
+            )}
           </div>
           <div className="text-[11px] text-muted-foreground">
             {spell.school}
           </div>
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
-          {spell.level >= 1 && (
+          {spell.level >= 1 && !spell.resourceId && (
             <button
               onClick={onTogglePrepared}
               className={
@@ -115,7 +131,13 @@ export function SpellCard({
             onClick={onCast}
           >
             <Wand2 className="h-3.5 w-3.5 mr-1.5" /> Cast
-            {spell.concentration ? "" : " (apply as effect)"}
+            {spell.concentration
+              ? ""
+              : hasMods
+                ? " (apply as effect)"
+                : spell.resourceCost
+                  ? ` (−${spell.resourceCost}${costLabel ? ` ${costLabel}` : ""})`
+                  : ""}
           </Button>
         ))}
     </div>

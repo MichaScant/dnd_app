@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Plus, Trash2, Crown, TrendingUp } from "lucide-react";
+import { CollapsibleCard } from "@/components/character/CollapsibleCard";
 
 export function ClassesTab({ c }: { c: Character }) {
   const { addClass, removeClass, setLevelTable } = useStore();
@@ -51,10 +52,14 @@ export function ClassesTab({ c }: { c: Character }) {
 
   return (
     <div className="space-y-6">
-      <section className="grimoire-card p-6">
-        <h3 className="font-display text-lg mb-4 flex items-center gap-2">
-          <Crown className="h-4 w-4 text-primary" /> Forge homebrew class
-        </h3>
+      <CollapsibleCard
+        storageId="classes-form"
+        title={
+          <>
+            <Crown className="h-4 w-4 text-primary" /> Forge homebrew class
+          </>
+        }
+      >
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
           <div className="md:col-span-2">
             <Label className="text-xs uppercase text-muted-foreground">
@@ -142,18 +147,22 @@ export function ClassesTab({ c }: { c: Character }) {
             ))}
           </div>
         )}
-      </section>
+      </CollapsibleCard>
 
-      <section className="grimoire-card p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="font-display text-lg flex items-center gap-2">
+      <CollapsibleCard
+        storageId="leveling-track"
+        title={
+          <>
             <TrendingUp className="h-4 w-4 text-primary" /> Custom leveling
             track
-          </h3>
+          </>
+        }
+        right={
           <Button size="sm" variant="outline" onClick={addRow}>
             <Plus className="h-3.5 w-3.5 mr-1" /> Add level
           </Button>
-        </div>
+        }
+      >
         {c.levelTable.length === 0 ? (
           <p className="text-sm text-muted-foreground italic">
             Define your own milestones, XP thresholds, and feature unlocks per
@@ -227,7 +236,7 @@ export function ClassesTab({ c }: { c: Character }) {
             </table>
           </div>
         )}
-      </section>
+      </CollapsibleCard>
     </div>
   );
 }

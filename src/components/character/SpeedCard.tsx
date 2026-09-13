@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Footprints, Plus, TriangleAlert } from "lucide-react";
+import { CollapsibleCard } from "@/components/character/CollapsibleCard";
 
 /**
  * Front-sheet Speed calculator: a base walking speed plus a stack of modifiers
@@ -46,10 +47,14 @@ export function SpeedCard({
   const start = (c.speed + speedPenalty + effectSpeed) * effectMult;
 
   return (
-    <section className="grimoire-card p-6">
-      <h3 className="font-display text-lg mb-1 flex items-center gap-2">
-        <Footprints className="h-4 w-4 text-primary" /> Speed
-      </h3>
+    <CollapsibleCard
+      storageId="speed"
+      title={
+        <>
+          <Footprints className="h-4 w-4 text-primary" /> Speed
+        </>
+      }
+    >
       <p className="text-xs text-muted-foreground mb-4">
         Set your base walking speed, then stack bonuses (racial traits, Haste,
         spells…).
@@ -141,6 +146,6 @@ export function SpeedCard({
           unmet: {speedPenalty} ft is included above.
         </p>
       )}
-    </section>
+    </CollapsibleCard>
   );
 }

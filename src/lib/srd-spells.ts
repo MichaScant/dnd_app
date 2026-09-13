@@ -1,9 +1,9 @@
 import { HomebrewSpell } from "@/lib/types";
-import { SRD_ATTRIBUTION } from "@/lib/srd-license";
+import { SRD_ATTRIBUTION, FAN_CONTENT_DISCLAIMER } from "@/lib/srd-license";
 import { detectSpellModifiers } from "@/lib/spellScan";
 import rawSpells from "@/data/srd-spells.json";
 
-export { SRD_ATTRIBUTION };
+export { SRD_ATTRIBUTION, FAN_CONTENT_DISCLAIMER };
 
 /**
  * A spell from the D&D 5e System Reference Document (SRD 5.1).

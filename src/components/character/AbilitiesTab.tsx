@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Plus, Trash2, Zap } from "lucide-react";
+import { CollapsibleCard } from "@/components/character/CollapsibleCard";
 
 export function AbilitiesTab({ c }: { c: Character }) {
   const { addAbility, removeAbility } = useStore();
@@ -24,10 +25,14 @@ export function AbilitiesTab({ c }: { c: Character }) {
 
   return (
     <div className="space-y-6">
-      <section className="grimoire-card p-6">
-        <h3 className="font-display text-lg mb-4 flex items-center gap-2">
-          <Zap className="h-4 w-4 text-primary" /> Forge homebrew ability
-        </h3>
+      <CollapsibleCard
+        storageId="abilities-form"
+        title={
+          <>
+            <Zap className="h-4 w-4 text-primary" /> Forge homebrew ability
+          </>
+        }
+      >
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div>
             <Label className="text-xs uppercase text-muted-foreground">
@@ -75,7 +80,7 @@ export function AbilitiesTab({ c }: { c: Character }) {
         <Button onClick={submit} className="mt-4">
           <Plus className="h-4 w-4 mr-1.5" /> Add ability
         </Button>
-      </section>
+      </CollapsibleCard>
 
       {c.abilities.length === 0 ? (
         <div className="grimoire-card p-12 text-center text-muted-foreground italic">

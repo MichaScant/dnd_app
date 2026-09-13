@@ -4,7 +4,7 @@ import { Character, HomebrewSpell } from "@/lib/types";
 import { useStore } from "@/lib/store";
 import { DraftMod, expandMods } from "@/lib/modifiers";
 import { ModifierEditor } from "@/components/character/ModifierEditor";
-import { Field, SelectField } from "@/components/character/FormField";
+import { Field, SELECT_CLASS } from "@/components/character/FormField";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,6 +24,8 @@ const SCHOOLS = [
   "Homebrew",
 ];
 
+const CUSTOM_SCHOOL = "✦ New custom school…";
+
 interface SpellFormState {
   name: string;
   level: number;
@@ -33,6 +35,8 @@ interface SpellFormState {
   duration: string;
   description: string;
   concentration: boolean;
+  resourceId: string; // "" = none (uses a spell slot)
+  resourceCost: number;
 }
 
 const blankSpell: SpellFormState = {
@@ -44,6 +48,8 @@ const blankSpell: SpellFormState = {
   duration: "Instantaneous",
   description: "",
   concentration: false,
+  resourceId: "",
+  resourceCost: 1,
 };
 
 const spellToForm = (s: HomebrewSpell): SpellFormState => ({
@@ -55,6 +61,8 @@ const spellToForm = (s: HomebrewSpell): SpellFormState => ({
   duration: s.duration,
   description: s.description,
   concentration: !!s.concentration,
+  resourceId: s.resourceId ?? "",
+  resourceCost: s.resourceCost ?? 1,
 });
 
 /**
@@ -77,12 +85,25 @@ export function SpellForm({
   const [mods, setMods] = useState<DraftMod[]>(
     () => (editing?.modifiers ?? []) as DraftMod[],
   );
+  // Free-typing a brand-new school (vs. picking an existing one).
+  const [customSchool, setCustomSchool] = useState(false);
+
+  const resources = c.resources ?? [];
+  // Existing schools (standard + any homebrew already used) stay pickable.
+  const schoolOptions = [
+    ...new Set([...SCHOOLS, ...c.spells.map((s) => s.school).filter(Boolean)]),
+  ];
 
   const submit = () => {
     if (!form.name.trim()) return;
     const payload = {
       ...form,
       name: form.name.trim(),
+      school: form.school.trim() || "Homebrew",
+      resourceId: form.resourceId || undefined,
+      resourceCost: form.resourceId
+        ? Math.max(1, form.resourceCost || 1)
+        : undefined,
       modifiers: expandMods(mods),
     };
     if (editing) {
@@ -93,6 +114,7 @@ export function SpellForm({
       addSpell(c.id, payload);
       setForm(blankSpell);
       setMods([]);
+      setCustomSchool(false);
     }
   };
 
@@ -120,23 +142,69 @@ export function SpellForm({
           />
         </Field>
         <Field label="Level">
-          <Input
-            type="number"
-            min={0}
-            max={9}
-            value={form.level}
-            onChange={(e) =>
-              setForm((f) => ({ ...f, level: +e.target.value || 0 }))
-            }
-          />
+          {form.resourceId ? (
+            <div className="text-[11px] text-muted-foreground italic mt-2.5">
+              Resource spell — no slot level
+            </div>
+          ) : (
+            <Input
+              type="number"
+              min={0}
+              max={9}
+              value={form.level}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, level: +e.target.value || 0 }))
+              }
+            />
+          )}
         </Field>
-        <SelectField
-          label="School"
-          span={2}
-          value={form.school}
-          options={SCHOOLS}
-          onChange={(v) => setForm((f) => ({ ...f, school: v }))}
-        />
+        <Field label="School" span={2}>
+          {customSchool ? (
+            <div className="flex gap-1.5">
+              <Input
+                autoFocus
+                value={form.school}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, school: e.target.value }))
+                }
+                placeholder="Blood Magic…"
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                title="Pick from the list instead"
+                onClick={() => {
+                  setCustomSchool(false);
+                  setForm((f) => ({ ...f, school: "Evocation" }));
+                }}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          ) : (
+            <select
+              className={SELECT_CLASS}
+              value={form.school}
+              onChange={(e) => {
+                const v = e.target.value;
+                if (v === CUSTOM_SCHOOL) {
+                  setCustomSchool(true);
+                  setForm((f) => ({ ...f, school: "" }));
+                } else {
+                  setForm((f) => ({ ...f, school: v }));
+                }
+              }}
+            >
+              {schoolOptions.map((o) => (
+                <option key={o} value={o}>
+                  {o}
+                </option>
+              ))}
+              <option value={CUSTOM_SCHOOL}>{CUSTOM_SCHOOL}</option>
+            </select>
+          )}
+        </Field>
         <Field label="Casting Time" span={2}>
           <Input
             value={form.castingTime}
@@ -174,6 +242,60 @@ export function SpellForm({
             <Brain className="h-3.5 w-3.5 text-primary" /> Requires
             concentration
           </Label>
+        </div>
+        <div className="md:col-span-6">
+          <Label className="text-xs uppercase text-muted-foreground">
+            Casting cost (optional)
+          </Label>
+          {resources.length === 0 ? (
+            <p className="text-[11px] text-muted-foreground mt-1">
+              Add a custom resource on the main sheet (e.g. Mana) to let a spell
+              cost it instead of a spell slot.
+            </p>
+          ) : (
+            <div className="flex flex-wrap items-center gap-2 mt-1">
+              <select
+                className={`${SELECT_CLASS} w-auto`}
+                value={form.resourceId}
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    resourceId: e.target.value,
+                    // Resource spells aren't slot-based, so drop the level.
+                    level: e.target.value ? 0 : f.level,
+                  }))
+                }
+              >
+                <option value="">Uses a spell slot (no resource)</option>
+                {resources.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.name}
+                  </option>
+                ))}
+              </select>
+              {form.resourceId && (
+                <div className="flex items-center gap-1.5">
+                  <span className="text-sm text-muted-foreground">costs</span>
+                  <Input
+                    type="number"
+                    min={1}
+                    className="w-20"
+                    value={form.resourceCost}
+                    onChange={(e) =>
+                      setForm((f) => ({
+                        ...f,
+                        resourceCost: Math.max(1, +e.target.value || 1),
+                      }))
+                    }
+                  />
+                  <span className="text-sm text-muted-foreground">
+                    {resources.find((r) => r.id === form.resourceId)?.name} per
+                    cast
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
         </div>
         <Field label="Description" span={6}>
           <Textarea

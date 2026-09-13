@@ -15,6 +15,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Sparkles } from "lucide-react";
+import { CollapsibleCard } from "@/components/character/CollapsibleCard";
 
 const SELECT_CLASS =
   "w-full bg-input border border-border rounded-md px-3 py-2 text-sm";
@@ -38,10 +39,14 @@ export function SpellcastingCard({ c }: { c: Character }) {
   const show = ability !== undefined || c.spellDcBase !== undefined;
 
   return (
-    <section className="grimoire-card p-6">
-      <h3 className="font-display text-lg mb-1 flex items-center gap-2">
-        <Sparkles className="h-4 w-4 text-primary" /> Spellcasting
-      </h3>
+    <CollapsibleCard
+      storageId="spellcasting"
+      title={
+        <>
+          <Sparkles className="h-4 w-4 text-primary" /> Spellcasting
+        </>
+      }
+    >
       <p className="text-xs text-muted-foreground mb-4">
         Save DC = base + proficiency + spellcasting-ability modifier. Pick the
         ability you cast with; the base is 8 by default.
@@ -86,7 +91,7 @@ export function SpellcastingCard({ c }: { c: Character }) {
         <StatBox label="Spell Save DC" value={show ? String(dc) : "—"} />
         <StatBox label="Spell Attack" value={show ? formatMod(atk) : "—"} />
       </div>
-    </section>
+    </CollapsibleCard>
   );
 }
 

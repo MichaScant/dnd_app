@@ -54,6 +54,8 @@ export interface HomebrewSpell {
   prepared?: boolean;
   modifiers?: StatModifier[]; // optional; "cast" turns these into an active effect
   concentration?: boolean; // the spell's effect requires concentration
+  resourceId?: string; // a custom front-sheet Resource this spell costs to cast (instead of a slot)
+  resourceCost?: number; // how much of that resource one cast consumes
 }
 
 export interface HomebrewAbility {

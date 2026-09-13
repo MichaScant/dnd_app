@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { ArrowUp, Plus } from "lucide-react";
+import { CollapsibleCard } from "@/components/character/CollapsibleCard";
 
 /**
  * Front-sheet jump-distance calculator. Base defaults to the character's
@@ -36,10 +37,14 @@ export function JumpCard({ c }: { c: Character }) {
   const start = (base + effAdd) * effMult;
 
   return (
-    <section className="grimoire-card p-6">
-      <h3 className="font-display text-lg mb-1 flex items-center gap-2">
-        <ArrowUp className="h-4 w-4 text-primary" /> Jump
-      </h3>
+    <CollapsibleCard
+      storageId="jump"
+      title={
+        <>
+          <ArrowUp className="h-4 w-4 text-primary" /> Jump
+        </>
+      }
+    >
       <p className="text-xs text-muted-foreground mb-4">
         Long-jump distance (defaults to your Strength score). Stack bonuses —
         racial traits, the Jump spell (×3), and so on.
@@ -120,6 +125,6 @@ export function JumpCard({ c }: { c: Character }) {
       >
         <Plus className="h-4 w-4 mr-1" /> Add modifier
       </Button>
-    </section>
+    </CollapsibleCard>
   );
 }

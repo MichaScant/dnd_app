@@ -11,16 +11,27 @@ import {
   CastPrompt,
 } from "@/components/character/ConcentrationDialog";
 import { SrdSpellPicker } from "@/components/character/SrdSpellPicker";
-import { Plus } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { SELECT_CLASS } from "@/components/character/FormField";
+import { CollapsibleCard } from "@/components/character/CollapsibleCard";
+import { Plus, Search, ArrowDownAZ, Flame } from "lucide-react";
 
-/** Bucket the spellbook by level (0 = cantrip), lowest first. */
-const byLevel = (spells: HomebrewSpell[]): [number, HomebrewSpell[]][] => {
+const byName = (a: HomebrewSpell, b: HomebrewSpell) =>
+  a.name.localeCompare(b.name);
+
+/** Bucket the spellbook by level (0 = cantrip), lowest first; optionally sort
+ *  each tier's spells alphabetically. */
+const byLevel = (
+  spells: HomebrewSpell[],
+  alpha = false,
+): [number, HomebrewSpell[]][] => {
   const groups: Record<number, HomebrewSpell[]> = {};
   for (const s of spells) (groups[s.level] ??= []).push(s);
   return Object.keys(groups)
     .map(Number)
     .sort((a, b) => a - b)
-    .map((lvl) => [lvl, groups[lvl]]);
+    .map((lvl) => [lvl, alpha ? [...groups[lvl]].sort(byName) : groups[lvl]]);
 };
 
 const levelLabel = (lvl: number) => (lvl === 0 ? "Cantrips" : `Level ${lvl}`);
@@ -37,9 +48,14 @@ export function SpellsTab({ c }: { c: Character }) {
     addSpellSlotTier,
     updateSpellSlotTier,
     removeSpellSlotTier,
+    updateResource,
   } = useStore();
   const [editing, setEditing] = useState<HomebrewSpell | null>(null);
   const [prompt, setPrompt] = useState<CastPrompt | null>(null);
+  // Spellbook view controls (apply within every tier of every list).
+  const [search, setSearch] = useState("");
+  const [school, setSchool] = useState("");
+  const [sortAlpha, setSortAlpha] = useState(false);
 
   const spellSlots = Array.isArray(c.spellSlots) ? c.spellSlots : [];
 
@@ -57,9 +73,21 @@ export function SpellsTab({ c }: { c: Character }) {
 
   const hasMods = (s: HomebrewSpell) => (s.modifiers?.length ?? 0) > 0;
 
-  /** Register the spell as an active effect. `applyMods` false = cast on
-   *  someone else, so no bonuses touch your sheet (but concentration still
-   *  counts, since you're the one concentrating). */
+  /** Deduct a spell's custom-resource cost from the front sheet, if it has one.
+   *  Returns the resource name (and whether the pool ran short) for messaging. */
+  const spendCost = (s: HomebrewSpell) => {
+    const cost = s.resourceCost;
+    const rid = s.resourceId;
+    if (!rid || !cost) return null;
+    const r = (c.resources ?? []).find((x) => x.id === rid);
+    if (!r) return null; // resource was deleted since the spell was written
+    updateResource(c.id, r.id, { current: Math.max(0, r.current - cost) });
+    return { name: r.name, short: r.current < cost, cost };
+  };
+
+  /** Register the spell as an active effect and/or spend its resource cost.
+   *  `applyMods` false = cast on someone else, so no bonuses touch your sheet
+   *  (but concentration still counts, and the cost is still paid). */
   const doCast = (s: HomebrewSpell, applyMods: boolean) => {
     const all = applyMods ? (s.modifiers ?? []) : [];
     // Speed/Jump rows go to their calculators, advantages to the tracker;
@@ -71,15 +99,28 @@ export function SpellsTab({ c }: { c: Character }) {
       (m) =>
         m.target !== "speed" && m.target !== "jump" && m.target !== "advantage",
     );
-    const effectId = addEffect(c.id, {
-      kind: "buff",
-      name: s.name,
-      description: s.description,
-      duration: s.duration,
-      modifiers: otherMods,
-      concentration: !!s.concentration,
-    });
-    if (effectId) {
+    // Only track an active effect when there's actually something to track —
+    // a resource-only spell just spends its cost.
+    const createsEffect =
+      !!s.concentration ||
+      otherMods.length > 0 ||
+      speedMods.length > 0 ||
+      jumpMods.length > 0 ||
+      advMods.length > 0;
+
+    if (createsEffect) {
+      const effectId = addEffect(c.id, {
+        kind: "buff",
+        name: s.name,
+        description: s.description,
+        duration: s.duration,
+        modifiers: otherMods,
+        concentration: !!s.concentration,
+      });
+      if (!effectId) {
+        toast.warning(`${s.name} is already active`);
+        return;
+      }
       if (speedMods.length)
         addSpeedModifiersForEffect(
           c.id,
@@ -112,16 +153,27 @@ export function SpellsTab({ c }: { c: Character }) {
             roll: m.note ?? "",
           })),
         );
-      toast.success(`Cast ${s.name}`, {
-        description: applyMods
+    }
+
+    const spent = spendCost(s);
+
+    const bits: string[] = [];
+    if (createsEffect)
+      bits.push(
+        applyMods
           ? s.concentration
             ? "On you · concentrating"
             : "Bonuses applied"
           : s.concentration
             ? "On another · concentrating"
             : "On another — no changes",
-      });
-    } else toast.warning(`${s.name} is already active`);
+      );
+    if (spent) bits.push(`−${spent.cost} ${spent.name}`);
+    toast.success(
+      `Cast ${s.name}`,
+      bits.length ? { description: bits.join(" · ") } : undefined,
+    );
+    if (spent?.short) toast.warning(`Not enough ${spent.name} — pool emptied`);
   };
 
   /** Cast, routing through the concentration-limit "drop" step if needed. */
@@ -160,10 +212,15 @@ export function SpellsTab({ c }: { c: Character }) {
 
   const castOnOther = () => {
     if (!prompt) return;
-    // On someone else: only worth tracking if it's a concentration spell.
-    if (prompt.spell.concentration) finalizeCast(prompt.spell, false);
-    else {
-      toast.success(`Cast ${prompt.spell.name}`, {
+    const s = prompt.spell;
+    // On someone else, no self-buff — but still track concentration and still
+    // pay any resource cost (the spell was cast either way).
+    if (s.concentration) finalizeCast(s, false);
+    else if (s.resourceCost) {
+      doCast(s, false);
+      setPrompt(null);
+    } else {
+      toast.success(`Cast ${s.name}`, {
         description: "On another — no changes to your sheet",
       });
       setPrompt(null);
@@ -177,18 +234,99 @@ export function SpellsTab({ c }: { c: Character }) {
     setPrompt(null);
   };
 
-  // Cantrips stay separate (always available); level-1+ spells split into
-  // prepared / unprepared lists.
-  const cantrips = c.spells.filter((s) => s.level === 0);
-  const prepared = c.spells.filter((s) => s.level >= 1 && s.prepared);
-  const unprepared = c.spells.filter((s) => s.level >= 1 && !s.prepared);
-  // Levels to show slot trackers for: any with level-1+ spells or existing tiers.
-  const slotLevels = [
+  // Schools present in this spellbook, for the filter dropdown.
+  const schools = [
+    ...new Set(c.spells.map((s) => s.school).filter(Boolean)),
+  ].sort();
+
+  // A spell passes the view controls if it matches the search and school.
+  const q = search.trim().toLowerCase();
+  const matches = (s: HomebrewSpell) =>
+    (!q || s.name.toLowerCase().includes(q)) &&
+    (!school || s.school === school);
+
+  // Resource spells (costing mana, ki, …) are grouped into their own sections
+  // at the top by resource, so they're excluded from the slot-based lists.
+  const cantrips = c.spells.filter(
+    (s) => !s.resourceId && s.level === 0 && matches(s),
+  );
+  const prepared = c.spells.filter(
+    (s) => !s.resourceId && s.level >= 1 && s.prepared && matches(s),
+  );
+  const unprepared = c.spells.filter(
+    (s) => !s.resourceId && s.level >= 1 && !s.prepared && matches(s),
+  );
+
+  // Resource-cost spells grouped under each resource's name (in sheet order),
+  // plus a catch-all for spells whose resource was since deleted.
+  const resourceList = c.resources ?? [];
+  const resourceSpells = c.spells.filter((s) => s.resourceId && matches(s));
+  const knownResourceIds = new Set(resourceList.map((r) => r.id));
+  const orphanResourceSpells = resourceSpells.filter(
+    (s) => !knownResourceIds.has(s.resourceId as string),
+  );
+  const resourceSections: {
+    id: string;
+    name: string;
+    current?: number;
+    max?: number;
+    spells: HomebrewSpell[];
+  }[] = [
+    ...resourceList.map((r) => ({
+      id: r.id,
+      name: r.name,
+      current: r.current,
+      max: r.max,
+      spells: resourceSpells.filter((s) => s.resourceId === r.id),
+    })),
+    ...(orphanResourceSpells.length
+      ? [
+          {
+            id: "orphan",
+            name: "Other resources",
+            spells: orphanResourceSpells,
+          },
+        ]
+      : []),
+  ].filter((sec) => sec.spells.length > 0);
+  // Tiers shown in the Prepared list: any level you have a prepared spell at
+  // (unfiltered, so the layout is stable while searching) or already have slots
+  // for. Slots live inline above that level's prepared spells.
+  const preparedLevels = [
     ...new Set([
-      ...c.spells.filter((s) => s.level >= 1).map((s) => s.level),
+      ...c.spells.filter((s) => s.level >= 1 && s.prepared).map((s) => s.level),
       ...spellSlots.map((t) => t.level),
     ]),
   ].sort((a, b) => a - b);
+
+  // Slot trackers for one spell level, plus an "add another pool" button.
+  const renderSlots = (lvl: number) => {
+    const tiers = spellSlots.filter((t) => t.level === lvl);
+    return (
+      <div className="space-y-2">
+        {tiers.map((t) => (
+          <SpellSlotTracker
+            key={t.id}
+            level={lvl}
+            total={t.total}
+            used={t.used}
+            type={t.type ?? ""}
+            onChangeTotal={(n) => updateSpellSlotTier(c.id, t.id, { total: n })}
+            onChangeUsed={(n) => updateSpellSlotTier(c.id, t.id, { used: n })}
+            onChangeType={(ty) => updateSpellSlotTier(c.id, t.id, { type: ty })}
+            onRemove={() => removeSpellSlotTier(c.id, t.id)}
+          />
+        ))}
+        <button
+          type="button"
+          onClick={() => addSpellSlotTier(c.id, lvl)}
+          className="text-[11px] flex items-center gap-1 text-muted-foreground hover:text-primary border border-dashed border-border rounded-md px-2 py-1"
+        >
+          <Plus className="h-3 w-3" /> Add slots
+        </button>
+      </div>
+    );
+  };
 
   const renderCard = (s: HomebrewSpell) => (
     <SpellCard
@@ -202,23 +340,27 @@ export function SpellsTab({ c }: { c: Character }) {
       onTogglePrepared={() =>
         updateSpell(c.id, s.id, { prepared: !s.prepared })
       }
+      costLabel={(c.resources ?? []).find((r) => r.id === s.resourceId)?.name}
     />
   );
 
   const renderList = (
     title: string,
+    id: string,
     list: HomebrewSpell[],
     emptyText: string,
   ) => (
-    <section className="grimoire-card p-5">
-      <h4 className="font-display text-sm uppercase tracking-widest text-primary mb-3">
-        {title}
-      </h4>
+    <CollapsibleCard
+      storageId={id}
+      className="grimoire-card p-5"
+      titleClassName="font-display text-sm uppercase tracking-widest text-primary"
+      title={title}
+    >
       {list.length === 0 ? (
         <p className="text-sm text-muted-foreground italic">{emptyText}</p>
       ) : (
         <div className="space-y-4">
-          {byLevel(list).map(([lvl, spells]) => (
+          {byLevel(list, sortAlpha).map(([lvl, spells]) => (
             <div key={lvl}>
               <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-2">
                 {levelLabel(lvl)}
@@ -230,7 +372,7 @@ export function SpellsTab({ c }: { c: Character }) {
           ))}
         </div>
       )}
-    </section>
+    </CollapsibleCard>
   );
 
   return (
@@ -257,72 +399,121 @@ export function SpellsTab({ c }: { c: Character }) {
         <>
           <PreparedSpellsCard c={c} />
 
-          {slotLevels.length > 0 && (
-            <section className="grimoire-card p-5">
-              <h4 className="font-display text-sm uppercase tracking-widest text-primary mb-3">
-                Spell Slots
-              </h4>
-              <div className="space-y-4">
-                {slotLevels.map((lvl) => {
-                  const tiers = spellSlots.filter((t) => t.level === lvl);
+          {c.spells.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="relative flex-1 min-w-[10rem]">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search spells by name…"
+                  className="pl-8"
+                />
+              </div>
+              <select
+                className={`${SELECT_CLASS} w-auto`}
+                value={school}
+                onChange={(e) => setSchool(e.target.value)}
+                aria-label="Filter by school"
+              >
+                <option value="">All schools</option>
+                {schools.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+              <Button
+                type="button"
+                variant={sortAlpha ? "secondary" : "outline"}
+                size="sm"
+                onClick={() => setSortAlpha((v) => !v)}
+                title="Sort each tier alphabetically"
+              >
+                <ArrowDownAZ className="h-4 w-4 mr-1.5" /> A–Z
+              </Button>
+            </div>
+          )}
+
+          {/* Custom resource spells — one section per resource, at the top. */}
+          {resourceSections.map((sec) => (
+            <CollapsibleCard
+              key={sec.id}
+              storageId={`res-${sec.id}`}
+              className="grimoire-card p-5"
+              titleClassName="font-display text-sm uppercase tracking-widest text-primary"
+              title={
+                <>
+                  <Flame className="h-4 w-4" /> {sec.name}
+                  {sec.current !== undefined && (
+                    <span className="text-[11px] normal-case tracking-normal text-muted-foreground">
+                      {sec.current}
+                      {sec.max ? `/${sec.max}` : ""} left
+                    </span>
+                  )}
+                </>
+              }
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {(sortAlpha ? [...sec.spells].sort(byName) : sec.spells).map(
+                  renderCard,
+                )}
+              </div>
+            </CollapsibleCard>
+          ))}
+
+          {cantrips.length > 0 && (
+            <CollapsibleCard
+              storageId="cantrips"
+              className="grimoire-card p-5"
+              titleClassName="font-display text-sm uppercase tracking-widest text-primary"
+              title="Cantrips"
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {(sortAlpha ? [...cantrips].sort(byName) : cantrips).map(
+                  renderCard,
+                )}
+              </div>
+            </CollapsibleCard>
+          )}
+
+          {/* Prepared spells, grouped by level with that level's spell slots
+              shown inline right above the spells they'd be cast with. */}
+          <CollapsibleCard
+            storageId="prepared"
+            className="grimoire-card p-5"
+            titleClassName="font-display text-sm uppercase tracking-widest text-primary"
+            title={`Prepared (${prepared.length})`}
+          >
+            {preparedLevels.length === 0 ? (
+              <p className="text-sm text-muted-foreground italic">
+                No spells prepared — tap the bookmark on a spell to prepare it.
+              </p>
+            ) : (
+              <div className="space-y-5">
+                {preparedLevels.map((lvl) => {
+                  const spells = prepared.filter((s) => s.level === lvl);
+                  const ordered = sortAlpha ? [...spells].sort(byName) : spells;
                   return (
                     <div key={lvl}>
-                      <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1.5">
+                      <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-2">
                         {levelLabel(lvl)}
                       </div>
-                      <div className="space-y-2">
-                        {tiers.map((t) => (
-                          <SpellSlotTracker
-                            key={t.id}
-                            level={lvl}
-                            total={t.total}
-                            used={t.used}
-                            type={t.type ?? ""}
-                            onChangeTotal={(n) =>
-                              updateSpellSlotTier(c.id, t.id, { total: n })
-                            }
-                            onChangeUsed={(n) =>
-                              updateSpellSlotTier(c.id, t.id, { used: n })
-                            }
-                            onChangeType={(ty) =>
-                              updateSpellSlotTier(c.id, t.id, { type: ty })
-                            }
-                            onRemove={() => removeSpellSlotTier(c.id, t.id)}
-                          />
-                        ))}
-                        <button
-                          type="button"
-                          onClick={() => addSpellSlotTier(c.id, lvl)}
-                          className="text-[11px] flex items-center gap-1 text-muted-foreground hover:text-primary border border-dashed border-border rounded-md px-2 py-1"
-                        >
-                          <Plus className="h-3 w-3" /> Add slots
-                        </button>
-                      </div>
+                      {renderSlots(lvl)}
+                      {ordered.length > 0 && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
+                          {ordered.map(renderCard)}
+                        </div>
+                      )}
                     </div>
                   );
                 })}
               </div>
-            </section>
-          )}
-
-          {cantrips.length > 0 && (
-            <section className="grimoire-card p-5">
-              <h4 className="font-display text-sm uppercase tracking-widest text-primary mb-3">
-                Cantrips
-              </h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {cantrips.map(renderCard)}
-              </div>
-            </section>
-          )}
-
-          {renderList(
-            `Prepared (${prepared.length})`,
-            prepared,
-            "No spells prepared — tap the bookmark on a spell to prepare it.",
-          )}
+            )}
+          </CollapsibleCard>
           {renderList(
             `Unprepared (${unprepared.length})`,
+            "unprepared",
             unprepared,
             "No unprepared spells.",
           )}

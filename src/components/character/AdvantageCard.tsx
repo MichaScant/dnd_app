@@ -3,6 +3,7 @@ import { useStore } from "@/lib/store";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Dices, Plus, Trash2 } from "lucide-react";
+import { CollapsibleCard } from "@/components/character/CollapsibleCard";
 
 const KIND_SELECT = "h-9 bg-input border border-border rounded-md px-2 text-sm";
 
@@ -16,10 +17,14 @@ export function AdvantageCard({ c }: { c: Character }) {
   const rows = c.advantages ?? [];
 
   return (
-    <section className="grimoire-card p-6">
-      <h3 className="font-display text-lg mb-1 flex items-center gap-2">
-        <Dices className="h-4 w-4 text-primary" /> Advantage & Disadvantage
-      </h3>
+    <CollapsibleCard
+      storageId="advantage"
+      title={
+        <>
+          <Dices className="h-4 w-4 text-primary" /> Advantage & Disadvantage
+        </>
+      }
+    >
       <p className="text-xs text-muted-foreground mb-4">
         Rolls you have advantage or disadvantage on. Cast spells add theirs
         automatically; add your own below.
@@ -41,7 +46,7 @@ export function AdvantageCard({ c }: { c: Character }) {
       <Button variant="outline" size="sm" onClick={() => addAdvantage(c.id)}>
         <Plus className="h-4 w-4 mr-1" /> Add
       </Button>
-    </section>
+    </CollapsibleCard>
   );
 }
 

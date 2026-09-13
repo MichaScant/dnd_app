@@ -17,6 +17,7 @@ import {
   BookMarked,
   Wand2,
 } from "lucide-react";
+import { CollapsibleCard } from "@/components/character/CollapsibleCard";
 
 export function EffectsTab({ c }: { c: Character }) {
   const { addEffect, removeEffect, saveEffectToLibrary, removeSavedEffect } =
@@ -93,8 +94,7 @@ export function EffectsTab({ c }: { c: Character }) {
 
   return (
     <div className="space-y-6">
-      <section className="grimoire-card p-6">
-        <h3 className="font-display text-lg mb-4">Inscribe new effect</h3>
+      <CollapsibleCard storageId="effects-form" title="Inscribe new effect">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <Label className="text-xs uppercase tracking-wider text-muted-foreground">
@@ -172,12 +172,17 @@ export function EffectsTab({ c }: { c: Character }) {
             <BookMarked className="h-4 w-4 mr-1.5" /> Save to library
           </Button>
         </div>
-      </section>
+      </CollapsibleCard>
 
-      <section className="grimoire-card p-5">
-        <h3 className="font-display text-lg mb-3 flex items-center gap-2">
-          <BookMarked className="h-4 w-4" /> Effect Library
-        </h3>
+      <CollapsibleCard
+        storageId="effect-library"
+        className="grimoire-card p-5"
+        title={
+          <>
+            <BookMarked className="h-4 w-4" /> Effect Library
+          </>
+        }
+      >
         {savedEffects.length === 0 ? (
           <p className="text-sm text-muted-foreground italic">
             Saved buffs & debuffs land here, ready to reapply to any adventurer.
@@ -252,7 +257,7 @@ export function EffectsTab({ c }: { c: Character }) {
             ))}
           </div>
         )}
-      </section>
+      </CollapsibleCard>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <EffectColumn
@@ -288,12 +293,12 @@ function EffectColumn({
   accent: "primary" | "destructive";
 }) {
   return (
-    <section className="grimoire-card p-5">
-      <h3
-        className={`font-display text-lg mb-3 ${accent === "primary" ? "text-primary" : "text-destructive"}`}
-      >
-        {title}
-      </h3>
+    <CollapsibleCard
+      storageId={`effects-${title.toLowerCase()}`}
+      className="grimoire-card p-5"
+      titleClassName={`font-display text-lg ${accent === "primary" ? "text-primary" : "text-destructive"}`}
+      title={title}
+    >
       {items.length === 0 ? (
         <p className="text-sm text-muted-foreground italic">{emptyText}</p>
       ) : (
@@ -344,6 +349,6 @@ function EffectColumn({
           ))}
         </div>
       )}
-    </section>
+    </CollapsibleCard>
   );
 }

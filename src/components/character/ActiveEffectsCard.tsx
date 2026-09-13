@@ -2,6 +2,7 @@ import { Character } from "@/lib/types";
 import { useStore } from "@/lib/store";
 import { ModifierChips } from "@/components/character/ModifierChips";
 import { Sparkles, Brain, Trash2 } from "lucide-react";
+import { CollapsibleCard } from "@/components/character/CollapsibleCard";
 
 /**
  * Front-sheet list of everything currently affecting the character — cast
@@ -14,10 +15,14 @@ export function ActiveEffectsCard({ c }: { c: Character }) {
   if (effects.length === 0) return null;
 
   return (
-    <section className="grimoire-card p-6">
-      <h3 className="font-display text-lg mb-1 flex items-center gap-2">
-        <Sparkles className="h-4 w-4 text-primary" /> Active Effects
-      </h3>
+    <CollapsibleCard
+      storageId="active-effects"
+      title={
+        <>
+          <Sparkles className="h-4 w-4 text-primary" /> Active Effects
+        </>
+      }
+    >
       <p className="text-xs text-muted-foreground mb-4">
         Cast spells, buffs, and debuffs affecting you now — their bonuses are
         already folded into your stats above.
@@ -67,6 +72,6 @@ export function ActiveEffectsCard({ c }: { c: Character }) {
           </div>
         ))}
       </div>
-    </section>
+    </CollapsibleCard>
   );
 }

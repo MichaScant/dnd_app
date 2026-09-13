@@ -6,6 +6,7 @@ import {
   SrdSpell,
   SRD_CLASSES,
   SRD_ATTRIBUTION,
+  FAN_CONTENT_DISCLAIMER,
   spellsForClass,
   groupByLevel,
   toHomebrewSpell,
@@ -36,6 +37,8 @@ export function SrdSpellPicker({ c }: { c: Character }) {
   const [open, setOpen] = useState(false);
   const [cls, setCls] = useState<string | null>("Wizard");
   const [query, setQuery] = useState("");
+  // A level-1+ spell awaiting the "prepare it?" choice after Add was clicked.
+  const [prepPrompt, setPrepPrompt] = useState<SrdSpell | null>(null);
 
   // Names already in this character's spellbook (case-insensitive), for de-dup.
   const existing = useMemo(
@@ -64,6 +67,17 @@ export function SrdSpellPicker({ c }: { c: Character }) {
         ? `${levelLabel(s.level)} · prepared`
         : levelLabel(s.level),
     });
+  };
+
+  // Cantrips can't be prepared, so add them straight away; for level-1+ spells
+  // ask whether to prepare it first.
+  const onAdd = (s: SrdSpell) => {
+    if (existing.has(s.name.trim().toLowerCase())) {
+      toast.warning(`${s.name} is already in your spellbook`);
+      return;
+    }
+    if (s.level >= 1) setPrepPrompt(s);
+    else add(s);
   };
 
   return (
@@ -150,35 +164,21 @@ export function SrdSpellPicker({ c }: { c: Character }) {
                             {s.school} · {s.castingTime} · {s.range}
                           </div>
                         </div>
-                        <div className="flex items-center gap-1.5 shrink-0">
+                        <Button
+                          size="sm"
+                          variant={added ? "ghost" : "secondary"}
+                          disabled={added}
+                          onClick={() => onAdd(s)}
+                          className="shrink-0"
+                        >
                           {added ? (
-                            <Button size="sm" variant="ghost" disabled>
-                              <Check className="h-3.5 w-3.5 mr-1" /> Added
-                            </Button>
-                          ) : (
                             <>
-                              <Button
-                                size="sm"
-                                variant="secondary"
-                                onClick={() => add(s)}
-                              >
-                                Add
-                              </Button>
-                              {/* Cantrips are always available — can't be prepared. */}
-                              {s.level >= 1 && (
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => add(s, true)}
-                                  title="Add to spellbook and mark prepared"
-                                >
-                                  <BookMarked className="h-3.5 w-3.5 mr-1" />{" "}
-                                  Prepare
-                                </Button>
-                              )}
+                              <Check className="h-3.5 w-3.5 mr-1" /> Added
                             </>
+                          ) : (
+                            "Add"
                           )}
-                        </div>
+                        </Button>
                       </div>
                     );
                   })}
@@ -188,10 +188,50 @@ export function SrdSpellPicker({ c }: { c: Character }) {
           )}
         </div>
 
-        <p className="text-[10px] text-muted-foreground border-t border-border pt-2">
-          {SRD_ATTRIBUTION}
-        </p>
+        <div className="text-[10px] text-muted-foreground border-t border-border pt-2 space-y-1">
+          <p>{SRD_ATTRIBUTION}</p>
+          <p>{FAN_CONTENT_DISCLAIMER}</p>
+        </div>
       </DialogContent>
+
+      {/* "Prepare it?" prompt shown after Add on a level-1+ spell. */}
+      <Dialog
+        open={!!prepPrompt}
+        onOpenChange={(o) => !o && setPrepPrompt(null)}
+      >
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <BookMarked className="h-4 w-4 text-primary" /> Prepare this
+              spell?
+            </DialogTitle>
+            <DialogDescription>
+              Add <span className="text-foreground">{prepPrompt?.name}</span> as
+              a prepared spell, or keep it in your spellbook unprepared? You can
+              change this anytime.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                if (prepPrompt) add(prepPrompt, false);
+                setPrepPrompt(null);
+              }}
+            >
+              Add unprepared
+            </Button>
+            <Button
+              onClick={() => {
+                if (prepPrompt) add(prepPrompt, true);
+                setPrepPrompt(null);
+              }}
+            >
+              <BookMarked className="h-4 w-4 mr-1.5" /> Prepare
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 }
