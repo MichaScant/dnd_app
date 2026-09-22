@@ -13,9 +13,7 @@ import {
 import { ModifierChips } from "@/components/character/ModifierChips";
 import { Label } from "@/components/ui/label";
 import { Shirt, TriangleAlert, Plus, Check } from "lucide-react";
-
-const SELECT_CLASS =
-  "w-full bg-input border border-border rounded-md px-3 py-2 text-sm";
+import { SELECT_CLASS } from "@/components/character/FormField";
 
 function StrWarning({ item, str }: { item: InventoryItem; str: number }) {
   if (item.strengthReq == null || str >= item.strengthReq) return null;

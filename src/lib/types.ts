@@ -258,6 +258,7 @@ export interface Character {
   preparedFormula?: string; // custom max-prepared formula; blank = standard 5e
   concentrationMax: number; // max simultaneous concentration spells (default 1)
   classes: HomebrewClass[];
+  subclasses?: Record<string, string>; // className -> chosen subclass (leveling track)
   spells: HomebrewSpell[];
   spellSlots: SpellSlotTier[]; // slot groups across tiers (see SpellSlotTier)
   resources: Resource[]; // custom campaign resource pools
@@ -307,6 +308,7 @@ export const createCharacter = (name = "New Adventurer"): Character => ({
   proficiencyBonus: 2,
   concentrationMax: 1,
   classes: [],
+  subclasses: {},
   spells: [],
   spellSlots: [],
   resources: [],

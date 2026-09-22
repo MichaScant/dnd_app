@@ -1,9 +1,15 @@
 import { ReactNode } from "react";
 import { Label } from "@/components/ui/label";
 
-/** Shared styling for the bare <select> elements used across the entry forms. */
-export const SELECT_CLASS =
-  "w-full bg-input border border-border rounded-md px-3 py-2 text-sm mt-0";
+/** Base look shared by every bare <select>: background, border, rounding.
+ *  Compose with size/padding utilities for one-off selects. */
+export const SELECT_BASE = "bg-input border border-border rounded-md";
+
+/** Full-width form <select> matching the Input height used across entry forms. */
+export const SELECT_CLASS = `w-full ${SELECT_BASE} px-3 py-2 text-sm mt-0`;
+
+/** Compact inline <select> for dense controls (movement rows, trackers). */
+export const SELECT_COMPACT = `h-9 ${SELECT_BASE} px-2 text-sm`;
 
 export type FieldSpan = 1 | 2 | 3 | 6;
 

@@ -16,9 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Sparkles } from "lucide-react";
 import { CollapsibleCard } from "@/components/character/CollapsibleCard";
-
-const SELECT_CLASS =
-  "w-full bg-input border border-border rounded-md px-3 py-2 text-sm";
+import { SELECT_CLASS } from "@/components/character/FormField";
 
 /**
  * Front-sheet spellcasting stats: Spell Save DC (8 + proficiency + ability mod)

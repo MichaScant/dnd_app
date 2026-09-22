@@ -5,7 +5,7 @@ import {
   STAT_KEYS,
   modifier,
 } from "@/lib/types";
-import { ImportResult, HOMEBREW_WARNINGS } from "./types";
+import { ImportResult, HOMEBREW_WARNINGS, toNum } from "./types";
 
 const ABILITY_BY_ABBR: Record<string, StatKey> = {
   str: "str",
@@ -78,11 +78,6 @@ const WEAPON_ROWS = [
     dmg: ["Wpn3 Damage ", "Wpn3 Damage 3", "Wpn3 Damage"],
   },
 ];
-
-const toNum = (s: string, fallback: number): number => {
-  const n = parseInt(String(s).replace(/[^0-9-]/g, ""), 10);
-  return Number.isFinite(n) ? n : fallback;
-};
 
 const labeled = (label: string, body: string): string =>
   body.trim() ? `## ${label}\n${body.trim()}` : "";

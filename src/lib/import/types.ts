@@ -1,5 +1,11 @@
 import { Character } from "@/lib/types";
 
+/** Parse the leading integer out of a messy string, else return `fallback`. */
+export const toNum = (s: string, fallback: number): number => {
+  const n = parseInt(String(s).replace(/[^0-9-]/g, ""), 10);
+  return Number.isFinite(n) ? n : fallback;
+};
+
 /** The result of parsing an external character sheet. */
 export interface ImportResult {
   /** Parsed fields, ready to hand to the store's importCharacter(). */

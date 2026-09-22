@@ -11,6 +11,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Plus, X } from "lucide-react";
+import { SELECT_BASE } from "@/components/character/FormField";
+
+const ME_SELECT = `${SELECT_BASE} px-2 py-1.5 text-sm`;
 
 /**
  * Controlled editor for a list of stat modifiers.
@@ -84,7 +87,7 @@ export function ModifierEditor({
                 onChange={(e) =>
                   updateMod(i, { target: e.target.value as ModTarget })
                 }
-                className="bg-input border border-border rounded-md px-2 py-1.5 text-sm flex-1 min-w-[10rem]"
+                className={`${ME_SELECT} flex-1 min-w-[10rem]`}
               >
                 {TARGET_OPTIONS.map((t) => (
                   <option key={t} value={t}>
@@ -99,7 +102,7 @@ export function ModifierEditor({
                   onChange={(e) =>
                     updateMod(i, { stat: e.target.value as StatChoice })
                   }
-                  className="bg-input border border-border rounded-md px-2 py-1.5 text-sm flex-1 min-w-[8rem]"
+                  className={`${ME_SELECT} flex-1 min-w-[8rem]`}
                 >
                   {STAT_KEYS.map((k) => (
                     <option key={k} value={k}>
@@ -114,7 +117,7 @@ export function ModifierEditor({
                 <select
                   value={m.skill ?? DEFAULT_SKILLS[0]}
                   onChange={(e) => updateMod(i, { skill: e.target.value })}
-                  className="bg-input border border-border rounded-md px-2 py-1.5 text-sm flex-1 min-w-[10rem]"
+                  className={`${ME_SELECT} flex-1 min-w-[10rem]`}
                 >
                   {DEFAULT_SKILLS.map((s) => (
                     <option key={s} value={s}>
@@ -146,7 +149,7 @@ export function ModifierEditor({
                             | undefined,
                         })
                       }
-                      className="bg-input border border-border rounded-md px-2 py-1.5 text-sm"
+                      className={ME_SELECT}
                     >
                       <option value="">flat</option>
                       {STAT_KEYS.map((k) => (
@@ -183,7 +186,7 @@ export function ModifierEditor({
                           | "disadvantage",
                       })
                     }
-                    className="bg-input border border-border rounded-md px-2 py-1.5 text-sm"
+                    className={ME_SELECT}
                   >
                     <option value="advantage">Advantage</option>
                     <option value="disadvantage">Disadvantage</option>

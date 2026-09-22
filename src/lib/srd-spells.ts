@@ -36,15 +36,27 @@ export const spellsForClass = (className: string | null): SrdSpell[] =>
     ? SRD_SPELLS
     : SRD_SPELLS.filter((s) => s.classes.includes(className));
 
-/** Bucket spells by level (0 = cantrip) for "class then level" display. */
-export const groupByLevel = (spells: SrdSpell[]): [number, SrdSpell[]][] => {
-  const byLevel = new Map<number, SrdSpell[]>();
-  for (const s of spells) {
-    const bucket = byLevel.get(s.level) ?? [];
-    bucket.push(s);
-    byLevel.set(s.level, bucket);
-  }
-  return [...byLevel.entries()].sort((a, b) => a[0] - b[0]);
+/** "Cantrips" for level 0, otherwise "Level N". */
+export const levelLabel = (lvl: number) =>
+  lvl === 0 ? "Cantrips" : `Level ${lvl}`;
+
+/** Bucket spells by level (0 = cantrip), lowest first; optionally sort each
+ *  tier's spells alphabetically by name. Works for any spell-shaped record. */
+export const groupByLevel = <T extends { level: number; name: string }>(
+  spells: T[],
+  alpha = false,
+): [number, T[]][] => {
+  const groups: Record<number, T[]> = {};
+  for (const s of spells) (groups[s.level] ??= []).push(s);
+  return Object.keys(groups)
+    .map(Number)
+    .sort((a, b) => a - b)
+    .map((lvl) => [
+      lvl,
+      alpha
+        ? [...groups[lvl]].sort((a, b) => a.name.localeCompare(b.name))
+        : groups[lvl],
+    ]);
 };
 
 /** Convert an SRD spell into the character's homebrew-spell shape for storage.

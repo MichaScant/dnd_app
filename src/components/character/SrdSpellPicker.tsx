@@ -9,6 +9,7 @@ import {
   FAN_CONTENT_DISCLAIMER,
   spellsForClass,
   groupByLevel,
+  levelLabel,
   toHomebrewSpell,
 } from "@/lib/srd-spells";
 import { Button } from "@/components/ui/button";
@@ -29,8 +30,6 @@ import {
   ScrollText,
   BookMarked,
 } from "lucide-react";
-
-const levelLabel = (lvl: number) => (lvl === 0 ? "Cantrips" : `Level ${lvl}`);
 
 export function SrdSpellPicker({ c }: { c: Character }) {
   const addSpell = useStore((s) => s.addSpell);

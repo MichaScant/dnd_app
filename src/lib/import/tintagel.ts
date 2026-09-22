@@ -1,6 +1,6 @@
 import type { WorkBook, WorkSheet } from "xlsx";
 import { Character, StatKey, STAT_KEYS } from "@/lib/types";
-import { ImportResult, HOMEBREW_WARNINGS } from "./types";
+import { ImportResult, HOMEBREW_WARNINGS, toNum } from "./types";
 
 // ---------------------------------------------------------------------------
 // Tintagel v2.92 reader. Mapped against the real workbook: stats/AC/level/prof
@@ -39,11 +39,6 @@ function refToCell(ref: string): { sheet: string; addr: string } | null {
   const m = ref.match(/^(?:'([^']+)'|([^!]+))!\$?([A-Z]+)\$?(\d+)/);
   return m ? { sheet: m[1] ?? m[2], addr: `${m[3]}${m[4]}` } : null;
 }
-
-const toNum = (s: string, fallback: number): number => {
-  const n = parseInt(String(s).replace(/[^0-9-]/g, ""), 10);
-  return Number.isFinite(n) ? n : fallback;
-};
 
 /**
  * Pull the character portrait out of the .xlsx (images live in xl/media/).

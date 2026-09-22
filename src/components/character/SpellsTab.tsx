@@ -11,6 +11,7 @@ import {
   CastPrompt,
 } from "@/components/character/ConcentrationDialog";
 import { SrdSpellPicker } from "@/components/character/SrdSpellPicker";
+import { groupByLevel, levelLabel } from "@/lib/srd-spells";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { SELECT_CLASS } from "@/components/character/FormField";
@@ -19,22 +20,6 @@ import { Plus, Search, ArrowDownAZ, Flame } from "lucide-react";
 
 const byName = (a: HomebrewSpell, b: HomebrewSpell) =>
   a.name.localeCompare(b.name);
-
-/** Bucket the spellbook by level (0 = cantrip), lowest first; optionally sort
- *  each tier's spells alphabetically. */
-const byLevel = (
-  spells: HomebrewSpell[],
-  alpha = false,
-): [number, HomebrewSpell[]][] => {
-  const groups: Record<number, HomebrewSpell[]> = {};
-  for (const s of spells) (groups[s.level] ??= []).push(s);
-  return Object.keys(groups)
-    .map(Number)
-    .sort((a, b) => a - b)
-    .map((lvl) => [lvl, alpha ? [...groups[lvl]].sort(byName) : groups[lvl]]);
-};
-
-const levelLabel = (lvl: number) => (lvl === 0 ? "Cantrips" : `Level ${lvl}`);
 
 export function SpellsTab({ c }: { c: Character }) {
   const {
@@ -52,7 +37,6 @@ export function SpellsTab({ c }: { c: Character }) {
   } = useStore();
   const [editing, setEditing] = useState<HomebrewSpell | null>(null);
   const [prompt, setPrompt] = useState<CastPrompt | null>(null);
-  // Spellbook view controls (apply within every tier of every list).
   const [search, setSearch] = useState("");
   const [school, setSchool] = useState("");
   const [sortAlpha, setSortAlpha] = useState(false);
@@ -77,12 +61,35 @@ export function SpellsTab({ c }: { c: Character }) {
    *  Returns the resource name (and whether the pool ran short) for messaging. */
   const spendCost = (s: HomebrewSpell) => {
     const cost = s.resourceCost;
-    const rid = s.resourceId;
-    if (!rid || !cost) return null;
-    const r = (c.resources ?? []).find((x) => x.id === rid);
-    if (!r) return null; // resource was deleted since the spell was written
+    const rId = s.resourceId; 
+    
+    if (!rId || !cost) return null;
+    
+    const r = (c.resources ?? []).find((x) => x.id === rId);
+    if (!r) return null; 
+
     updateResource(c.id, r.id, { current: Math.max(0, r.current - cost) });
     return { name: r.name, short: r.current < cost, cost };
+  };
+
+  /**
+   * Spend a slot for a spell. If the spell has a resource cost, spend that instead.
+   * @param s - the spell to spend a slot for
+   * @returns a message to display to the user
+   */
+  const spendSlot = (s: HomebrewSpell) => {
+    if (s.level < 1 || s.resourceId) return;
+    
+    const tiers = spellSlots.filter((t) => t.level === s.level);
+    if (tiers.length === 0) return;
+    const openSlots = tiers.find((slot) => slot.used < slot.total);
+    if (!openSlots) {
+      toast.warning(`No level-${s.level} slots left`); 
+      return; 
+    }
+    
+    updateSpellSlotTier(c.id, openSlots.id, { used: openSlots.used + 1 });
+    return `Used a level-${s.level} slot`;
   };
 
   /** Register the spell as an active effect and/or spend its resource cost.
@@ -90,8 +97,6 @@ export function SpellsTab({ c }: { c: Character }) {
    *  (but concentration still counts, and the cost is still paid). */
   const doCast = (s: HomebrewSpell, applyMods: boolean) => {
     const all = applyMods ? (s.modifiers ?? []) : [];
-    // Speed/Jump rows go to their calculators, advantages to the tracker;
-    // the rest live on the effect.
     const speedMods = all.filter((m) => m.target === "speed");
     const jumpMods = all.filter((m) => m.target === "jump");
     const advMods = all.filter((m) => m.target === "advantage");
@@ -99,14 +104,15 @@ export function SpellsTab({ c }: { c: Character }) {
       (m) =>
         m.target !== "speed" && m.target !== "jump" && m.target !== "advantage",
     );
-    // Only track an active effect when there's actually something to track —
-    // a resource-only spell just spends its cost.
+    
     const createsEffect =
       !!s.concentration ||
       otherMods.length > 0 ||
       speedMods.length > 0 ||
       jumpMods.length > 0 ||
       advMods.length > 0;
+
+    spendSlot(s);
 
     if (createsEffect) {
       const effectId = addEffect(c.id, {
@@ -360,7 +366,7 @@ export function SpellsTab({ c }: { c: Character }) {
         <p className="text-sm text-muted-foreground italic">{emptyText}</p>
       ) : (
         <div className="space-y-4">
-          {byLevel(list, sortAlpha).map(([lvl, spells]) => (
+          {groupByLevel(list, sortAlpha).map(([lvl, spells]) => (
             <div key={lvl}>
               <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-2">
                 {levelLabel(lvl)}

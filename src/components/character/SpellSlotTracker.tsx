@@ -2,6 +2,7 @@ import { useState } from "react";
 import { SRD_CLASSES } from "@/lib/srd-spells";
 import { Input } from "@/components/ui/input";
 import { RotateCcw, Trash2 } from "lucide-react";
+import { SELECT_BASE } from "@/components/character/FormField";
 
 /** 1 → "1st", 2 → "2nd", 3 → "3rd", 4 → "4th", … */
 const ordinal = (n: number): string => {
@@ -10,8 +11,7 @@ const ordinal = (n: number): string => {
   return `${n}${suffixes[(v - 20) % 10] ?? suffixes[v] ?? suffixes[0]}`;
 };
 
-const CLASS_SELECT =
-  "h-7 bg-input border border-border rounded-md px-2 text-xs";
+const CLASS_SELECT = `h-7 ${SELECT_BASE} px-2 text-xs`;
 
 /**
  * Spell-slot tracker for a single tier: shows the slot type, total, and how

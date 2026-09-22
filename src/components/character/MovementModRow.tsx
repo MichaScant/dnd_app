@@ -1,8 +1,7 @@
 import { SpeedModifier } from "@/lib/types";
 import { Input } from "@/components/ui/input";
 import { Trash2, ChevronUp, ChevronDown } from "lucide-react";
-
-const OP_SELECT = "h-9 bg-input border border-border rounded-md px-2 text-sm";
+import { SELECT_COMPACT } from "@/components/character/FormField";
 
 /**
  * One reorderable add/×multiply modifier row, shared by the Speed and Jump
@@ -61,7 +60,7 @@ export function MovementModRow({
         aria-label="Modifier label"
       />
       <select
-        className={OP_SELECT}
+        className={SELECT_COMPACT}
         value={m.op}
         onChange={(e) => onChange({ op: e.target.value as "add" | "mult" })}
         aria-label="Operation"

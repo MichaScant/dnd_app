@@ -45,6 +45,37 @@ import {
   ArrowUp,
 } from "lucide-react";
 
+function DamageInput({
+  hp,
+  maxHp,
+  onChange,
+}: {
+  hp: number;
+  maxHp: number;
+  onChange: (v: number) => void;
+}) {
+  const [draft, setDraft] = useState("");
+  const apply = () => {
+    const amt = Number(draft);
+    if (!amt) { setDraft(""); return; }    
+    onChange(Math.min(maxHp, Math.max(0, hp - amt))); // clamp 0..maxHp
+    setDraft("");                               // clear after applying
+  };
+  return (
+    <Input
+      type="number"
+      value={draft}
+      placeholder="dmg"
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={apply}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") { apply(); (e.target as HTMLInputElement).blur(); }
+      }}
+      className="text-center h-9 w-20"
+    />
+  );
+}
+
 export function OverviewTab({ c }: { c: Character }) {
   const { update, setStat, toggleSave, cycleSkill } = useStore();
   // Buffs/debuffs + equipped gear all feed the stat, AC, save, and skill math.
@@ -169,6 +200,11 @@ export function OverviewTab({ c }: { c: Character }) {
               onCommit={(v) => update(c.id, { maxHp: v })}
             />
           </div>
+          <DamageInput
+            hp={c.hp}
+            maxHp={c.maxHp}
+            onChange={(v) => update(c.id, { hp: v })}
+          />
         </VitalCard>
         <VitalCard icon={<Shield className="h-4 w-4" />} label="Armor Class">
           {(() => {

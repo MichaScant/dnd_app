@@ -4,8 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Dices, Plus, Trash2 } from "lucide-react";
 import { CollapsibleCard } from "@/components/character/CollapsibleCard";
-
-const KIND_SELECT = "h-9 bg-input border border-border rounded-md px-2 text-sm";
+import { SELECT_COMPACT } from "@/components/character/FormField";
 
 /**
  * Front-sheet tracker for rolls the character has advantage / disadvantage on.
@@ -71,7 +70,7 @@ function AdvRow({
         </span>
       )}
       <select
-        className={`${KIND_SELECT} ${dis ? "text-destructive" : "text-primary"}`}
+        className={`${SELECT_COMPACT} ${dis ? "text-destructive" : "text-primary"}`}
         value={r.kind}
         onChange={(e) =>
           onChange({ kind: e.target.value as "advantage" | "disadvantage" })
