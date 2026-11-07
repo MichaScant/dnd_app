@@ -229,10 +229,8 @@ export interface Effect {
 }
 
 export interface LevelEntry {
-  level: number;
   className: string;
-  features: string;
-  xpRequired?: number;
+  level: number; // this class's level = how many levels taken in this class
 }
 
 export interface Character {

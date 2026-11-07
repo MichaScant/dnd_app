@@ -59,14 +59,8 @@ export function ClassesTab({ c }: { c: Character }) {
       c.levelTable.map((r, idx) => (idx === i ? { ...r, ...patch } : r)),
     );
 
-  // The track is sequential: a row's character level is just its position, so
-  // levels renumber automatically as rows are added or removed.
-  const renumber = (rows: LevelEntry[]): LevelEntry[] =>
-    rows.map((r, idx) => ({ ...r, level: idx + 1 }));
-
-  // Pick a class for a row. A standard class auto-fills that level's features —
-  // keyed to the class's OWN level (its Nth occurrence), so multiclassing stays
-  // correct. "Custom" flips the cell to a free-text field.
+  // Pick a class for a row. Features are derived live from class + level (see
+  // renderFeatures), so this only sets the name. "Custom" flips to free text.
   const pickClass = (i: number, value: string) => {
     if (value === CUSTOM_CLASS) {
       setCustomIdx((s) => new Set(s).add(i));
@@ -78,23 +72,17 @@ export function ClassesTab({ c }: { c: Character }) {
       n.delete(i);
       return n;
     });
-    const classLevel =
-      c.levelTable.slice(0, i).filter((r) => r.className === value).length + 1;
-    const feats = featuresAtLevel(value, classLevel);
-    updateRow(i, { className: value, ...(feats ? { features: feats } : {}) });
+    updateRow(i, { className: value });
   };
 
-  // Adding a level appends the next character level automatically.
+  // Each row is one class at a chosen level; new rows start blank at level 1.
   const addRow = () =>
+    setLevelTable(c.id, [...c.levelTable, { className: "", level: 1 }]);
+  const removeRow = (i: number) => {
     setLevelTable(
       c.id,
-      renumber([
-        ...c.levelTable,
-        { level: 0, className: "", features: "", xpRequired: 0 },
-      ]),
+      c.levelTable.filter((_, idx) => idx !== i),
     );
-  const removeRow = (i: number) => {
-    setLevelTable(c.id, renumber(c.levelTable.filter((_, idx) => idx !== i)));
     // Shift tracked custom-rows down past the removed index.
     setCustomIdx((s) => {
       const n = new Set<number>();
@@ -120,6 +108,101 @@ export function ClassesTab({ c }: { c: Character }) {
       return n;
     });
     setSubclass(cls, value);
+  };
+
+  // Everything a class row shows under "Features": the base-class features at
+  // every level up to this one, then (once the subclass level is reached) the
+  // subclass picker and its features across levels.
+  const renderFeatures = (r: LevelEntry) => {
+    const info = r.className ? subclassInfo(r.className) : undefined;
+    const baseLines: { n: number; f: string }[] = [];
+    for (let n = 1; n <= r.level; n++) {
+      const f = featuresAtLevel(r.className, n);
+      if (f) baseLines.push({ n, f });
+    }
+    const chosen = c.subclasses?.[r.className] ?? "";
+    const opts = info ? subclassOptions(r.className) : [];
+    const custom =
+      !!info &&
+      (customSub.has(r.className) || (!!chosen && !opts.includes(chosen)));
+    const subLines: { n: number; f: string }[] = [];
+    if (info && chosen && !custom) {
+      for (let n = info.level; n <= r.level; n++) {
+        const f = subclassFeaturesAt(r.className, chosen, n);
+        if (f) subLines.push({ n, f });
+      }
+    }
+    return (
+      <div className="space-y-1 text-xs">
+        {baseLines.length === 0 && !info ? (
+          <span className="text-muted-foreground">—</span>
+        ) : (
+          baseLines.map(({ n, f }) => (
+            <div key={n}>
+              <span className="text-muted-foreground tabular-nums mr-1">
+                L{n}
+              </span>
+              {f}
+            </div>
+          ))
+        )}
+        {info && r.level >= info.level && (
+          <div className="rounded-md border border-primary/30 bg-primary/5 p-2 space-y-1 mt-1">
+            <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              {info.label}
+            </div>
+            {custom ? (
+              <div className="flex items-center gap-1">
+                <Input
+                  autoFocus
+                  value={chosen}
+                  onChange={(e) => setSubclass(r.className, e.target.value)}
+                  className="h-7"
+                  placeholder="Subclass name"
+                />
+                <button
+                  type="button"
+                  title="Pick from list"
+                  onClick={() => {
+                    setCustomSub((s) => {
+                      const n = new Set(s);
+                      n.delete(r.className);
+                      return n;
+                    });
+                    setSubclass(r.className, "");
+                  }}
+                  className="text-muted-foreground hover:text-primary shrink-0"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            ) : (
+              <select
+                className={`${SELECT_BASE} h-7 w-full px-2 text-xs`}
+                value={opts.includes(chosen) ? chosen : ""}
+                onChange={(e) => pickSubclass(r.className, e.target.value)}
+              >
+                <option value="">Choose {info.label}…</option>
+                {opts.map((o) => (
+                  <option key={o} value={o}>
+                    {o}
+                  </option>
+                ))}
+                <option value={CUSTOM_CLASS}>Custom…</option>
+              </select>
+            )}
+            {subLines.map(({ n, f }) => (
+              <div key={n} className="text-foreground">
+                <span className="text-muted-foreground tabular-nums mr-1">
+                  L{n}
+                </span>
+                {f}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -231,42 +314,35 @@ export function ClassesTab({ c }: { c: Character }) {
         }
         right={
           <Button size="sm" variant="outline" onClick={addRow}>
-            <Plus className="h-3.5 w-3.5 mr-1" /> Add level
+            <Plus className="h-3.5 w-3.5 mr-1" /> Add class
           </Button>
         }
       >
         {c.levelTable.length === 0 ? (
           <p className="text-sm text-muted-foreground italic">
-            Define your own milestones, XP thresholds, and feature unlocks per
-            level.
+            Add each class and set its level — features fill in automatically.
           </p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-[11px] uppercase tracking-widest text-muted-foreground border-b border-border">
-                  <th className="py-2 px-2 w-16">Lv</th>
-                  <th className="py-2 px-2 w-40">Class</th>
-                  <th className="py-2 px-2 w-28">XP</th>
-                  <th className="py-2 px-2">Features unlocked</th>
-                  <th className="py-2 px-2 w-10"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {c.levelTable.map((r, i) => {
-                  // This row's level within its OWN class (its Nth occurrence),
-                  // and the class's subclass metadata (if any).
-                  const classLevel = c.levelTable
-                    .slice(0, i + 1)
-                    .filter((x) => x.className === r.className).length;
-                  const info = r.className
-                    ? subclassInfo(r.className)
-                    : undefined;
-                  return (
-                    <tr key={i} className="border-b border-border/60">
-                      <td className="py-1.5 px-2 font-display text-primary tabular-nums">
-                        {i + 1}
-                      </td>
+          <>
+            <div className="text-xs text-muted-foreground mb-3">
+              Total character level:{" "}
+              <span className="text-primary font-display">
+                {c.levelTable.reduce((sum, r) => sum + (r.level || 0), 0)}
+              </span>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-[11px] uppercase tracking-widest text-muted-foreground border-b border-border">
+                    <th className="py-2 px-2 w-44">Class</th>
+                    <th className="py-2 px-2 w-20">Level</th>
+                    <th className="py-2 px-2">Features unlocked</th>
+                    <th className="py-2 px-2 w-10"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {c.levelTable.map((r, i) => (
+                    <tr key={i} className="border-b border-border/60 align-top">
                       <td className="py-1.5 px-1">
                         {customIdx.has(i) ||
                         (r.className && !classOptions.includes(r.className)) ? (
@@ -319,121 +395,17 @@ export function ClassesTab({ c }: { c: Character }) {
                       <td className="py-1.5 px-1">
                         <Input
                           type="number"
-                          value={r.xpRequired ?? 0}
+                          min={1}
+                          value={r.level}
                           onChange={(e) =>
-                            updateRow(i, { xpRequired: +e.target.value || 0 })
+                            updateRow(i, {
+                              level: Math.max(1, +e.target.value || 1),
+                            })
                           }
-                          className="h-8"
+                          className="h-8 w-16"
                         />
                       </td>
-                      <td className="py-1.5 px-1">
-                        <div className="space-y-1.5">
-                          <Input
-                            value={r.features}
-                            onChange={(e) =>
-                              updateRow(i, { features: e.target.value })
-                            }
-                            className="h-8"
-                            placeholder="Eldritch Surge, +1 ASI…"
-                          />
-                          {info &&
-                            classLevel >= info.level &&
-                            (() => {
-                              const chosen = c.subclasses?.[r.className] ?? "";
-                              const opts = subclassOptions(r.className);
-                              const custom =
-                                customSub.has(r.className) ||
-                                (!!chosen && !opts.includes(chosen));
-                              const isChoice = classLevel === info.level;
-                              const detail =
-                                chosen && !custom
-                                  ? subclassFeaturesAt(
-                                      r.className,
-                                      chosen,
-                                      classLevel,
-                                    )
-                                  : "";
-                              // Later level with nothing new from the subclass.
-                              if (!isChoice && !detail) return null;
-                              return (
-                                <div className="rounded-md border border-primary/30 bg-primary/5 p-2 space-y-1">
-                                  {isChoice ? (
-                                    <>
-                                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                                        {info.label}
-                                      </div>
-                                      {custom ? (
-                                        <div className="flex items-center gap-1">
-                                          <Input
-                                            autoFocus
-                                            value={chosen}
-                                            onChange={(e) =>
-                                              setSubclass(
-                                                r.className,
-                                                e.target.value,
-                                              )
-                                            }
-                                            className="h-7"
-                                            placeholder="Subclass name"
-                                          />
-                                          <button
-                                            type="button"
-                                            title="Pick from list"
-                                            onClick={() => {
-                                              setCustomSub((s) => {
-                                                const n = new Set(s);
-                                                n.delete(r.className);
-                                                return n;
-                                              });
-                                              setSubclass(r.className, "");
-                                            }}
-                                            className="text-muted-foreground hover:text-primary shrink-0"
-                                          >
-                                            <X className="h-3.5 w-3.5" />
-                                          </button>
-                                        </div>
-                                      ) : (
-                                        <select
-                                          className={`${SELECT_BASE} h-7 w-full px-2 text-xs`}
-                                          value={
-                                            opts.includes(chosen) ? chosen : ""
-                                          }
-                                          onChange={(e) =>
-                                            pickSubclass(
-                                              r.className,
-                                              e.target.value,
-                                            )
-                                          }
-                                        >
-                                          <option value="">
-                                            Choose {info.label}…
-                                          </option>
-                                          {opts.map((o) => (
-                                            <option key={o} value={o}>
-                                              {o}
-                                            </option>
-                                          ))}
-                                          <option value={CUSTOM_CLASS}>
-                                            Custom…
-                                          </option>
-                                        </select>
-                                      )}
-                                    </>
-                                  ) : (
-                                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                                      {chosen}
-                                    </div>
-                                  )}
-                                  {detail && (
-                                    <div className="text-xs text-foreground">
-                                      {detail}
-                                    </div>
-                                  )}
-                                </div>
-                              );
-                            })()}
-                        </div>
-                      </td>
+                      <td className="py-1.5 px-1">{renderFeatures(r)}</td>
                       <td className="py-1.5 px-1">
                         <button
                           onClick={() => removeRow(i)}
@@ -443,11 +415,11 @@ export function ClassesTab({ c }: { c: Character }) {
                         </button>
                       </td>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </CollapsibleCard>
     </div>

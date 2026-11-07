@@ -20,7 +20,9 @@ export function classLevels(c: Character): { name: string; level: number }[] {
     const m = new Map<string, number>();
     for (const e of table) {
       const n = (e.className ?? "").trim();
-      if (n) m.set(n, (m.get(n) ?? 0) + 1);
+      // Each row carries its class's level directly now (was: one row per
+      // character level, so we counted rows). Sum in case a class is listed twice.
+      if (n) m.set(n, (m.get(n) ?? 0) + (e.level || 0));
     }
     if (m.size) return [...m].map(([name, level]) => ({ name, level }));
   }
