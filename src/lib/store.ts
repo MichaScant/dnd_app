@@ -693,16 +693,33 @@ export const activeEffects = (c: Character): Effect[] => [
   ...equippedGearEffects(c),
 ];
 
+/** Visit every modifier on every active effect (shared by the sum/mult family
+ *  below so the double-loop lives in one place). */
+const forEachMod = (
+  effects: Effect[],
+  cb: (m: Effect["modifiers"][number]) => void,
+) => {
+  for (const e of effects) for (const m of e.modifiers) cb(m);
+};
+
+/** Sum the deltas of modifiers matching `pred` across active effects. */
+const sumWhere = (
+  effects: Effect[],
+  pred: (m: Effect["modifiers"][number]) => boolean,
+): number => {
+  let total = 0;
+  forEachMod(effects, (m) => {
+    if (pred(m)) total += m.delta;
+  });
+  return total;
+};
+
 export const effectiveStats = (base: Stats, effects: Effect[]): Stats => {
   const out: Stats = { ...base };
-  for (const e of effects) {
-    for (const m of e.modifiers) {
-      const target = m.target ?? "stat";
-      if (target === "stat" && m.stat) {
-        out[m.stat] = (out[m.stat] ?? 0) + m.delta;
-      }
-    }
-  }
+  forEachMod(effects, (m) => {
+    if ((m.target ?? "stat") === "stat" && m.stat)
+      out[m.stat] = (out[m.stat] ?? 0) + m.delta;
+  });
   return out;
 };
 
@@ -720,15 +737,8 @@ export const sumEffectBonus = (
     | "bonusAction"
     | "speed"
     | "jump",
-): number => {
-  let total = 0;
-  for (const e of effects) {
-    for (const m of e.modifiers) {
-      if (m.target === target && (m.op ?? "add") === "add") total += m.delta;
-    }
-  }
-  return total;
-};
+): number =>
+  sumWhere(effects, (m) => m.target === target && (m.op ?? "add") === "add");
 
 /**
  * Effective Armor Class: the highest of the manual base AC and any "set" AC
@@ -754,42 +764,23 @@ export const effectiveAc = (
 };
 
 /** Sum saving-throw bonuses for a specific ability stat across effects. */
-export const sumSaveBonus = (effects: Effect[], stat: StatKey): number => {
-  let total = 0;
-  for (const e of effects) {
-    for (const m of e.modifiers) {
-      if (m.target === "save" && m.stat === stat) total += m.delta;
-    }
-  }
-  return total;
-};
+export const sumSaveBonus = (effects: Effect[], stat: StatKey): number =>
+  sumWhere(effects, (m) => m.target === "save" && m.stat === stat);
 
 /** Sum skill bonuses for a specific skill across effects. */
-export const sumSkillBonus = (effects: Effect[], skill: string): number => {
-  let total = 0;
-  for (const e of effects) {
-    for (const m of e.modifiers) {
-      if (m.target === "skill" && m.skill === skill) total += m.delta;
-    }
-  }
-  return total;
-};
+export const sumSkillBonus = (effects: Effect[], skill: string): number =>
+  sumWhere(effects, (m) => m.target === "skill" && m.skill === skill);
 
-/** Product of speed ×multipliers from active spells/gear (e.g. Haste ×2). */
-export const effectSpeedMult = (effects: Effect[]): number => {
+/** Product of ×multipliers for a movement target from active spells/gear
+ *  (e.g. Haste ×2 on speed, the Jump spell ×3 on jump). */
+export const effectMult = (
+  effects: Effect[],
+  target: "speed" | "jump",
+): number => {
   let mult = 1;
-  for (const e of effects)
-    for (const m of e.modifiers)
-      if (m.target === "speed" && m.op === "mult") mult *= m.delta || 1;
-  return mult;
-};
-
-/** Product of jump ×multipliers from active spells/gear (e.g. Jump spell ×3). */
-export const effectJumpMult = (effects: Effect[]): number => {
-  let mult = 1;
-  for (const e of effects)
-    for (const m of e.modifiers)
-      if (m.target === "jump" && m.op === "mult") mult *= m.delta || 1;
+  forEachMod(effects, (m) => {
+    if (m.target === target && m.op === "mult") mult *= m.delta || 1;
+  });
   return mult;
 };
 
@@ -807,7 +798,7 @@ export const effectiveJump = (
     modifiers,
     0,
     sumEffectBonus(effects, "jump"),
-    effectJumpMult(effects),
+    effectMult(effects, "jump"),
   );
 
 /**

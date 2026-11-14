@@ -17,7 +17,7 @@ import {
   sumSkillBonus,
   concentrationCount,
   computeEffectiveSpeed,
-  effectSpeedMult,
+  effectMult,
   effectiveJump,
   effectiveAc,
 } from "@/lib/store";
@@ -57,9 +57,12 @@ function DamageInput({
   const [draft, setDraft] = useState("");
   const apply = () => {
     const amt = Number(draft);
-    if (!amt) { setDraft(""); return; }    
+    if (!amt) {
+      setDraft("");
+      return;
+    }
     onChange(Math.min(maxHp, Math.max(0, hp - amt))); // clamp 0..maxHp
-    setDraft("");                               // clear after applying
+    setDraft(""); // clear after applying
   };
   return (
     <Input
@@ -69,7 +72,10 @@ function DamageInput({
       onChange={(e) => setDraft(e.target.value)}
       onBlur={apply}
       onKeyDown={(e) => {
-        if (e.key === "Enter") { apply(); (e.target as HTMLInputElement).blur(); }
+        if (e.key === "Enter") {
+          apply();
+          (e.target as HTMLInputElement).blur();
+        }
       }}
       className="text-center h-9 w-20"
     />
@@ -95,7 +101,7 @@ export function OverviewTab({ c }: { c: Character }) {
     c.speedModifiers ?? [],
     speedPenalty,
     sumEffectBonus(allEffects, "speed"),
-    effectSpeedMult(allEffects),
+    effectMult(allEffects, "speed"),
   );
   const effJump = effectiveJump(
     c.jumpBase ?? effective.str,

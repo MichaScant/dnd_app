@@ -4,7 +4,7 @@ import {
   computeEffectiveSpeed,
   activeEffects,
   sumEffectBonus,
-  effectSpeedMult,
+  effectMult,
 } from "@/lib/store";
 import { MovementModRow } from "@/components/character/MovementModRow";
 import { Input } from "@/components/ui/input";
@@ -36,15 +36,15 @@ export function SpeedCard({
   // Flat + multiplicative "speed" bonuses from active spells & equipped gear.
   const all = activeEffects(c);
   const effectSpeed = sumEffectBonus(all, "speed");
-  const effectMult = effectSpeedMult(all);
+  const speedMult = effectMult(all, "speed");
   const effective = computeEffectiveSpeed(
     c.speed,
     mods,
     speedPenalty,
     effectSpeed,
-    effectMult,
+    speedMult,
   );
-  const start = (c.speed + speedPenalty + effectSpeed) * effectMult;
+  const start = (c.speed + speedPenalty + effectSpeed) * speedMult;
 
   return (
     <CollapsibleCard
@@ -96,13 +96,13 @@ export function SpeedCard({
               = {effective}
             </div>
           )}
-          {(effectSpeed !== 0 || effectMult !== 1) && (
+          {(effectSpeed !== 0 || speedMult !== 1) && (
             <div className="text-[10px] text-muted-foreground mt-0.5">
               incl.
               {effectSpeed !== 0
                 ? ` ${effectSpeed > 0 ? "+" : ""}${effectSpeed} ft`
                 : ""}
-              {effectMult !== 1 ? ` ×${effectMult}` : ""} from active spells &
+              {speedMult !== 1 ? ` ×${speedMult}` : ""} from active spells &
               gear
             </div>
           )}

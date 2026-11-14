@@ -5,7 +5,7 @@ import {
   effectiveStats,
   effectiveJump,
   sumEffectBonus,
-  effectJumpMult,
+  effectMult,
 } from "@/lib/store";
 import { MovementModRow } from "@/components/character/MovementModRow";
 import { Input } from "@/components/ui/input";
@@ -32,7 +32,7 @@ export function JumpCard({ c }: { c: Character }) {
   const base = c.jumpBase ?? effective.str;
   const mods = c.jumpModifiers ?? [];
   const effAdd = sumEffectBonus(all, "jump");
-  const effMult = effectJumpMult(all);
+  const effMult = effectMult(all, "jump");
   const eff = effectiveJump(base, mods, all);
   const start = (base + effAdd) * effMult;
 

@@ -11,11 +11,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Trash2, Crown, TrendingUp, X } from "lucide-react";
+import { Plus, Trash2, Crown, TrendingUp } from "lucide-react";
 import { CollapsibleCard } from "@/components/character/CollapsibleCard";
+import { PickOrType } from "@/components/character/PickOrType";
 import {
   CLASS_NAMES,
-  CUSTOM_CLASS,
   featuresAtLevel,
   subclassInfo,
   subclassOptions,
@@ -40,10 +40,6 @@ export function ClassesTab({ c }: { c: Character }) {
     setForm({ name: "", description: "", hitDie: "d8", primaryStat: "str" });
   };
 
-  // Rows the user has switched to free-text "Custom" class entry. Tracked by
-  // row index (kept in sync when a row is removed).
-  const [customIdx, setCustomIdx] = useState<Set<number>>(new Set());
-
   // Selectable classes: the standard SRD classes plus any homebrew classes the
   // user has forged on this sheet.
   const classOptions = [
@@ -59,22 +55,6 @@ export function ClassesTab({ c }: { c: Character }) {
       c.levelTable.map((r, idx) => (idx === i ? { ...r, ...patch } : r)),
     );
 
-  // Pick a class for a row. Features are derived live from class + level (see
-  // renderFeatures), so this only sets the name. "Custom" flips to free text.
-  const pickClass = (i: number, value: string) => {
-    if (value === CUSTOM_CLASS) {
-      setCustomIdx((s) => new Set(s).add(i));
-      updateRow(i, { className: "" });
-      return;
-    }
-    setCustomIdx((s) => {
-      const n = new Set(s);
-      n.delete(i);
-      return n;
-    });
-    updateRow(i, { className: value });
-  };
-
   // Each row is one class at a chosen level; new rows start blank at level 1.
   const addRow = () =>
     setLevelTable(c.id, [...c.levelTable, { className: "", level: 1 }]);
@@ -83,32 +63,11 @@ export function ClassesTab({ c }: { c: Character }) {
       c.id,
       c.levelTable.filter((_, idx) => idx !== i),
     );
-    // Shift tracked custom-rows down past the removed index.
-    setCustomIdx((s) => {
-      const n = new Set<number>();
-      for (const x of s) if (x !== i) n.add(x > i ? x - 1 : x);
-      return n;
-    });
   };
 
-  // Subclass chosen per class (className -> subclass), stored on the character,
-  // plus which classes are typing a free-text "Custom" subclass name.
-  const [customSub, setCustomSub] = useState<Set<string>>(new Set());
+  // Subclass chosen per class (className -> subclass), stored on the character.
   const setSubclass = (cls: string, value: string) =>
     update(c.id, { subclasses: { ...(c.subclasses ?? {}), [cls]: value } });
-  const pickSubclass = (cls: string, value: string) => {
-    if (value === CUSTOM_CLASS) {
-      setCustomSub((s) => new Set(s).add(cls));
-      setSubclass(cls, "");
-      return;
-    }
-    setCustomSub((s) => {
-      const n = new Set(s);
-      n.delete(cls);
-      return n;
-    });
-    setSubclass(cls, value);
-  };
 
   // Everything a class row shows under "Features": the base-class features at
   // every level up to this one, then (once the subclass level is reached) the
@@ -122,11 +81,9 @@ export function ClassesTab({ c }: { c: Character }) {
     }
     const chosen = c.subclasses?.[r.className] ?? "";
     const opts = info ? subclassOptions(r.className) : [];
-    const custom =
-      !!info &&
-      (customSub.has(r.className) || (!!chosen && !opts.includes(chosen)));
+    // Subclass features only exist for a known (non-custom) subclass choice.
     const subLines: { n: number; f: string }[] = [];
-    if (info && chosen && !custom) {
+    if (info && opts.includes(chosen)) {
       for (let n = info.level; n <= r.level; n++) {
         const f = subclassFeaturesAt(r.className, chosen, n);
         if (f) subLines.push({ n, f });
@@ -151,46 +108,15 @@ export function ClassesTab({ c }: { c: Character }) {
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
               {info.label}
             </div>
-            {custom ? (
-              <div className="flex items-center gap-1">
-                <Input
-                  autoFocus
-                  value={chosen}
-                  onChange={(e) => setSubclass(r.className, e.target.value)}
-                  className="h-7"
-                  placeholder="Subclass name"
-                />
-                <button
-                  type="button"
-                  title="Pick from list"
-                  onClick={() => {
-                    setCustomSub((s) => {
-                      const n = new Set(s);
-                      n.delete(r.className);
-                      return n;
-                    });
-                    setSubclass(r.className, "");
-                  }}
-                  className="text-muted-foreground hover:text-primary shrink-0"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              </div>
-            ) : (
-              <select
-                className={`${SELECT_BASE} h-7 w-full px-2 text-xs`}
-                value={opts.includes(chosen) ? chosen : ""}
-                onChange={(e) => pickSubclass(r.className, e.target.value)}
-              >
-                <option value="">Choose {info.label}…</option>
-                {opts.map((o) => (
-                  <option key={o} value={o}>
-                    {o}
-                  </option>
-                ))}
-                <option value={CUSTOM_CLASS}>Custom…</option>
-              </select>
-            )}
+            <PickOrType
+              options={opts}
+              value={chosen}
+              onChange={(v) => setSubclass(r.className, v)}
+              placeholder={`Choose ${info.label}…`}
+              customPlaceholder="Subclass name"
+              selectClassName={`${SELECT_BASE} h-7 w-full px-2 text-xs`}
+              inputClassName="h-7"
+            />
             {subLines.map(({ n, f }) => (
               <div key={n} className="text-foreground">
                 <span className="text-muted-foreground tabular-nums mr-1">
@@ -344,53 +270,14 @@ export function ClassesTab({ c }: { c: Character }) {
                   {c.levelTable.map((r, i) => (
                     <tr key={i} className="border-b border-border/60 align-top">
                       <td className="py-1.5 px-1">
-                        {customIdx.has(i) ||
-                        (r.className && !classOptions.includes(r.className)) ? (
-                          <div className="flex items-center gap-1">
-                            <Input
-                              autoFocus
-                              value={r.className}
-                              onChange={(e) =>
-                                updateRow(i, { className: e.target.value })
-                              }
-                              className="h-8"
-                              placeholder="Class name"
-                            />
-                            <button
-                              type="button"
-                              title="Pick from list"
-                              onClick={() => {
-                                setCustomIdx((s) => {
-                                  const n = new Set(s);
-                                  n.delete(i);
-                                  return n;
-                                });
-                                updateRow(i, { className: "" });
-                              }}
-                              className="text-muted-foreground hover:text-primary shrink-0"
-                            >
-                              <X className="h-3.5 w-3.5" />
-                            </button>
-                          </div>
-                        ) : (
-                          <select
-                            className={ROW_SELECT}
-                            value={
-                              classOptions.includes(r.className)
-                                ? r.className
-                                : ""
-                            }
-                            onChange={(e) => pickClass(i, e.target.value)}
-                          >
-                            <option value="">Select…</option>
-                            {classOptions.map((n) => (
-                              <option key={n} value={n}>
-                                {n}
-                              </option>
-                            ))}
-                            <option value={CUSTOM_CLASS}>Custom…</option>
-                          </select>
-                        )}
+                        <PickOrType
+                          options={classOptions}
+                          value={r.className}
+                          onChange={(v) => updateRow(i, { className: v })}
+                          placeholder="Select…"
+                          customPlaceholder="Class name"
+                          selectClassName={ROW_SELECT}
+                        />
                       </td>
                       <td className="py-1.5 px-1">
                         <Input
